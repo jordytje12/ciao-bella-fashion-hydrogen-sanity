@@ -28,7 +28,7 @@ export function HeroBanner({
         src={imageUrl}
       />
 
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.12)_0%,rgba(8,8,8,0.38)_45%,rgba(8,8,8,0.74)_100%),linear-gradient(90deg,rgba(8,8,8,0.72)_0%,rgba(8,8,8,0.3)_50%,rgba(8,8,8,0.08)_100%)]" />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.05)_0%,rgba(8,8,8,0.22)_45%,rgba(8,8,8,0.52)_100%),linear-gradient(90deg,rgba(8,8,8,0.45)_0%,rgba(8,8,8,0.18)_50%,rgba(8,8,8,0.04)_100%)]" />
 
       <div className="relative z-10 flex min-h-[80vh] max-w-2xl flex-col justify-end gap-4 px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-14">
         <h1 className="max-w-xl font-heading font-normal leading-[normal] text-white text-balance text-[40px] sm:text-[52px] lg:text-[64px]">
