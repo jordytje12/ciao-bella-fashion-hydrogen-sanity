@@ -2,6 +2,7 @@ import {Link} from 'react-router';
 
 type HeroBannerProps = {
   imageUrl: string;
+  mobileImageUrl?: string;
   imageAlt?: string;
   title: string;
   description?: string;
@@ -13,6 +14,7 @@ type HeroBannerProps = {
 
 export function HeroBanner({
   imageUrl,
+  mobileImageUrl,
   imageAlt,
   title,
   description,
@@ -20,13 +22,18 @@ export function HeroBanner({
 }: HeroBannerProps) {
   return (
     <section data-hero className="relative overflow-hidden bg-neutral-950 text-white">
-      <img
-        alt={imageAlt ?? title}
-        className="absolute inset-0 h-full w-full object-cover"
-        fetchPriority="high"
-        loading="eager"
-        src={imageUrl}
-      />
+      <picture className="absolute inset-0 h-full w-full">
+        {mobileImageUrl ? (
+          <source media="(max-width: 767px)" srcSet={mobileImageUrl} />
+        ) : null}
+        <img
+          alt={imageAlt ?? title}
+          className="absolute inset-0 h-full w-full object-cover"
+          fetchPriority="high"
+          loading="eager"
+          src={imageUrl}
+        />
+      </picture>
 
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.05)_0%,rgba(8,8,8,0.22)_45%,rgba(8,8,8,0.52)_100%),linear-gradient(90deg,rgba(8,8,8,0.45)_0%,rgba(8,8,8,0.18)_50%,rgba(8,8,8,0.04)_100%)]" />
 

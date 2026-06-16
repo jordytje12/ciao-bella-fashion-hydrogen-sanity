@@ -68,10 +68,10 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
   const hero = data.sanityHome?.hero;
-  const heroImageData = hero?.content?.[0]?.image;
-  const heroImage = heroImageData
-    ? urlFor(heroImageData).auto('format').fit('crop').url()
-    : null;
+  const desktopData = hero?.imageDesktop;
+  const mobileData = hero?.imageMobile;
+  const desktopImage = desktopData ? urlFor(desktopData).auto('format').fit('crop').url() : null;
+  const mobileImage = mobileData ? urlFor(mobileData).auto('format').fit('crop').url() : null;
   const heroLink = hero?.link?.[0];
   const heroLinkUrl = (() => {
     if (!heroLink) return '/';
@@ -87,9 +87,10 @@ export default function Homepage() {
   return (
     <div className="home">
       {data.isShopLinked ? null : <MockShopNotice />}
-      {hero && heroImage ? (
+      {hero && desktopImage ? (
         <HeroBanner
-          imageUrl={heroImage}
+          imageUrl={desktopImage}
+          mobileImageUrl={mobileImage ?? desktopImage}
           title={hero.title}
           description={hero.description}
           link={{text: hero.button_text ?? 'Shop now', url: heroLinkUrl}}
@@ -199,6 +200,8 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
         newWindow
       }
     },
+    imageDesktop{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
+    imageMobile{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
     content[]{
       _type,
       _type == "imageWithProductHotspots" => {
