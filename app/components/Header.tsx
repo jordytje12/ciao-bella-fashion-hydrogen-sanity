@@ -19,7 +19,6 @@ interface HeaderProps {
 
 type Viewport = 'desktop' | 'mobile';
 
-const HEADER_HEIGHT = 64;
 
 export function Header({
   header,
@@ -37,6 +36,10 @@ export function Header({
 
   // Track whether user has scrolled past the hero
   const [scrolled, setScrolled] = useState(false);
+  // topOffset: volgt de topbar omhoog terwijl die wegscrolt.
+  // Start op 40 (= --topbar-height) zodat de header vanaf frame 1 juist staat.
+  const TOPBAR_HEIGHT = 40;
+  const [topOffset, setTopOffset] = useState(TOPBAR_HEIGHT);
 
   useEffect(() => {
     if (!isHome) {
@@ -45,8 +48,9 @@ export function Header({
     }
     const updateScrolled = () => {
       const hero = document.querySelector<HTMLElement>('[data-hero]');
-      const threshold = hero ? hero.offsetHeight - HEADER_HEIGHT : 200;
+      const threshold = hero ? hero.offsetHeight * 0.5 : 200;
       setScrolled(window.scrollY > threshold);
+      setTopOffset(Math.max(0, TOPBAR_HEIGHT - window.scrollY));
     };
     updateScrolled();
     window.addEventListener('scroll', updateScrolled, {passive: true});
@@ -63,7 +67,10 @@ export function Header({
     : 'header header--solid';
 
   return (
-    <header className={headerClass}>
+    <header
+      className={headerClass}
+      style={isHome ? {top: topOffset} : undefined}
+    >
       <div className="header-inner">
         <div className="header-left">
           <HeaderMenuMobileToggle />
@@ -81,7 +88,13 @@ export function Header({
           className="header-logo"
           end
         >
-          <div className="header-logo-text">Ciao Bella</div>
+          <img
+            src="https://cdn.shopify.com/s/files/1/0651/3541/1427/files/Ciao_Bella.svg?v=1781609526"
+            alt="Ciao Bella"
+            className="header-logo-img"
+            width={379}
+            height={71}
+          />
         </NavLink>
         <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
       </div>

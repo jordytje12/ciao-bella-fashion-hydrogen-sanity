@@ -4,6 +4,7 @@
   --cart-aside-summary-height: 250px;
   --grid-item-width: 355px;
   --header-height: 64px;
+  --topbar-height: 40px; /* 18px tekst + 2×20px padding */
   --color-dark: var(--color-black);
   --color-light: var(--color-white);
 }
@@ -251,9 +252,10 @@ button.reset:hover:not(:has(> *)) {
 }
 
 /* homepage boven de hero: transparant, fixed over de content */
+/* top = topbar hoogte zodat de topbar (in de flow) niet overdekt wordt */
 .header--home {
   position: fixed;
-  top: 0;
+  top: var(--topbar-height);
   left: 0;
   right: 0;
   background: transparent;
@@ -266,6 +268,10 @@ button.reset:hover:not(:has(> *)) {
   color: #fff;
 }
 
+.header--home .header-logo-img {
+  filter: none; /* bron is wit, toon as-is op de transparante hero-header */
+}
+
 /* homepage na scrollen: cream met zwarte inhoud */
 .header--home.header--scrolled {
   background: var(--color-cream);
@@ -275,6 +281,10 @@ button.reset:hover:not(:has(> *)) {
 .header--home.header--scrolled .header-menu-mobile-toggle,
 .header--home.header--scrolled .header-logo-text {
   color: #000;
+}
+
+.header--home.header--scrolled .header-logo-img {
+  filter: brightness(0); /* wit → zwart na scroll */
 }
 
 .header-logo {
@@ -299,6 +309,18 @@ button.reset:hover:not(:has(> *)) {
 
   @media (min-width: 64em) {
     font-size: 4rem;
+  }
+}
+
+.header-logo-img {
+  display: block;
+  height: 22px;
+  width: auto;
+  filter: brightness(0); /* witte bron → zwart op cream/inner pages */
+  transition: filter 0.25s ease;
+
+  @media (min-width: 64em) {
+    height: 26px;
   }
 }
 
@@ -347,11 +369,16 @@ button.reset:hover:not(:has(> *)) {
 .header-menu-item {
   cursor: pointer;
   color: #FFF;
-font-family: "DM Sans";
-font-size: 1.125rem;
-font-style: normal;
-font-weight: 400;
-line-height: normal;
+  font-family: "DM Sans";
+  font-size: 1.125rem;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+}
+
+.header-menu-desktop .header-menu-item {
+  font-size: 0.75rem; /* 12px, alleen desktop */
+  letter-spacing: 0.04em;
 }
 
 .header-ctas {
@@ -779,4 +806,68 @@ line-height: normal;
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+}
+
+/*
+* --------------------------------------------------
+* components/Topbar
+* --------------------------------------------------
+*/
+.topbar {
+  background: var(--color-cream);
+  height: var(--topbar-height);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  text-align: center;
+  color: #000;
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  animation: topbar-cycle 3.5s ease forwards;
+}
+
+.topbar-icon {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+@keyframes topbar-cycle {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  12% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  80% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-inner {
+    animation: none;
+  }
 }

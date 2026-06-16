@@ -15,6 +15,7 @@ import {
   SearchFormPredictive,
 } from '~/components/SearchFormPredictive';
 import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
+import {Topbar, type TopbarUsp} from '~/components/Topbar';
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
@@ -22,6 +23,7 @@ interface PageLayoutProps {
   header: HeaderQuery;
   isLoggedIn: Promise<boolean>;
   publicStoreDomain: string;
+  topbarUsps?: TopbarUsp[];
   children?: React.ReactNode;
 }
 
@@ -32,12 +34,14 @@ export function PageLayout({
   header,
   isLoggedIn,
   publicStoreDomain,
+  topbarUsps,
 }: PageLayoutProps) {
   return (
     <Aside.Provider>
       <CartAside cart={cart} />
       <SearchAside />
       <MobileMenuAside header={header} publicStoreDomain={publicStoreDomain} />
+      <Topbar items={topbarUsps} />
       {header && (
         <Header
           header={header}

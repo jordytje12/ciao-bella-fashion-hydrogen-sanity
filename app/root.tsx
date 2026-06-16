@@ -13,6 +13,7 @@ import {
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
+import {sanityLanguage} from '~/lib/i18n';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
@@ -111,19 +112,26 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context}: Route.LoaderArgs) {
-  const {storefront} = context;
+  const {storefront, sanity} = context;
+  const language = sanityLanguage(storefront.i18n.language);
 
-  const [header] = await Promise.all([
+  const [header, sanitySettings] = await Promise.all([
     storefront.query(HEADER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
         headerMenuHandle: 'main-menu', // Adjust to your header menu handle
       },
     }),
-    // Add other queries here, so that they are loaded in parallel
+    sanity.fetch<{usps: Array<{text: string; iconUrl: string | null}>} | null>(
+      TOPBAR_QUERY,
+      {language},
+    ),
   ]);
 
-  return {header};
+  const topbarUsps =
+    sanitySettings?.usps?.filter((item) => Boolean(item.text)) ?? [];
+
+  return {header, topbarUsps};
 }
 
 /**
@@ -231,3 +239,10 @@ export function ErrorBoundary() {
     </div>
   );
 }
+
+const TOPBAR_QUERY = `*[_type == "settings"][0]{
+  "usps": topbarUsps[]{
+    "text": coalesce(text[language == $language][0].value, text[language == "nl"][0].value),
+    "iconUrl": icon.asset->url
+  }
+}`;
