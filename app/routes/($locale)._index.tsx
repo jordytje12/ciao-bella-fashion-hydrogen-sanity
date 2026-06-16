@@ -200,7 +200,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
       _type,
       _type == "imageWithProductHotspots" => {
         image{
-          asset->{url, metadata{dimensions}},
+          asset->{_id, url, metadata{dimensions}},
           hotspot,
           crop
         }
