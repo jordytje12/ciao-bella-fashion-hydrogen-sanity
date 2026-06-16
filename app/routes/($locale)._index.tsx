@@ -4,11 +4,16 @@ import {Suspense} from 'react';
 import {Image} from '@shopify/hydrogen';
 import type {
   FeaturedCollectionFragment,
+  HomepageCollectionGridQuery,
   RecommendedProductsQuery,
 } from 'storefrontapi.generated';
 import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
+import {
+  CollectionGrid,
+  type CollectionGridItem,
+} from '~/components/CollectionGrid';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 
@@ -38,12 +43,51 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
       language: sanityLanguage(context.storefront.i18n.language),
     }),
   ]);
+  const collectionGrid = await loadCollectionGrid(
+    context,
+    sanityHome?.collectionGrid?.cards ?? [],
+  );
 
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
+    collectionGrid,
     featuredCollection: collections.nodes[0],
     sanityHome,
   };
+}
+
+async function loadCollectionGrid(
+  context: Route.LoaderArgs['context'],
+  selections: SanityCollectionGridSelection[],
+): Promise<CollectionGridItem[]> {
+  const collectionIds = uniqueStrings(
+    selections.map((selection) => selection.collectionId),
+  );
+
+  if (collectionIds.length === 0) return [];
+
+  const response = (await context.storefront.query(
+    HOMEPAGE_COLLECTION_GRID_QUERY,
+    {
+      variables: {
+        collectionIds,
+      },
+    },
+  )) as HomepageCollectionGridQuery;
+
+  const collectionsById = new Map(
+    (response.collections ?? [])
+      .filter(isShopifyCollectionNode)
+      .map((collection) => [collection.id, collection]),
+  );
+
+  return selections
+    .map((selection) =>
+      resolveCollectionGridItem(selection, collectionsById),
+    )
+    .filter((collection): collection is CollectionGridItem =>
+      Boolean(collection),
+    );
 }
 
 /**
@@ -98,6 +142,7 @@ export default function Homepage() {
       ) : (
         <FeaturedCollection collection={data.featuredCollection} />
       )}
+      <CollectionGrid collections={data.collectionGrid} />
       <RecommendedProducts products={data.recommendedProducts} />
     </div>
   );
@@ -181,6 +226,96 @@ const FEATURED_COLLECTION_QUERY = `#graphql
   }
 ` as const;
 
+type SanityCollectionGridSelection = {
+  collectionId?: string | null;
+  handle?: string | null;
+  fallbackTitle?: string | null;
+  title?: string | null;
+  image?: SanityCollectionCardImage | null;
+};
+
+type ShopifyCollectionNode = NonNullable<
+  HomepageCollectionGridQuery['collections'][number]
+>;
+
+type SanityCollectionCardImage = {
+  asset?: {
+    metadata?: {
+      dimensions?: {
+        width?: number | null;
+        height?: number | null;
+      } | null;
+    } | null;
+  } | null;
+};
+
+function uniqueStrings(values: Array<string | null | undefined>) {
+  return Array.from(
+    new Set(values.filter((value): value is string => Boolean(value))),
+  );
+}
+
+function isShopifyCollectionNode(
+  node: HomepageCollectionGridQuery['collections'][number],
+): node is ShopifyCollectionNode {
+  return Boolean(node);
+}
+
+function resolveCollectionGridItem(
+  selection: SanityCollectionGridSelection,
+  collectionsById: Map<string, ShopifyCollectionNode>,
+): CollectionGridItem | null {
+  if (!selection.collectionId || !selection.image) return null;
+
+  const collection = collectionsById.get(selection.collectionId);
+  if (!collection) return null;
+
+  const imageUrl = urlFor(selection.image as Parameters<typeof urlFor>[0])
+    .width(1000)
+    .height(1250)
+    .auto('format')
+    .fit('crop')
+    .url();
+  if (!imageUrl) return null;
+
+  const title = selection.title || collection.title || selection.fallbackTitle;
+  const handle = collection.handle || selection.handle;
+  if (!title || !handle) return null;
+
+  return {
+    id: collection.id,
+    title,
+    handle,
+    image: {
+      url: imageUrl,
+      altText: title,
+      width: 1000,
+      height: 1250,
+    },
+  };
+}
+
+const HOMEPAGE_COLLECTION_GRID_QUERY = `#graphql
+  fragment HomepageCollectionGridCollection on Collection {
+    __typename
+    id
+    title
+    handle
+  }
+
+  query HomepageCollectionGrid(
+    $collectionIds: [ID!]!
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    collections: nodes(ids: $collectionIds) {
+      ... on Collection {
+        ...HomepageCollectionGridCollection
+      }
+    }
+  }
+` as const;
+
 const HOME_PAGE_QUERY = `*[_type == "home"][0]{
   hero{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
@@ -210,6 +345,19 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
           hotspot,
           crop
         }
+      }
+    }
+  },
+  collectionGrid{
+    cards[]{
+      "collectionId": collection->store.gid,
+      "handle": collection->store.slug.current,
+      "fallbackTitle": collection->store.title,
+      "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+      image{
+        asset->{_id, url, metadata{dimensions}},
+        hotspot,
+        crop
       }
     }
   },
