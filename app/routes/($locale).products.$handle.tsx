@@ -12,6 +12,7 @@ import {ProductPrice} from '~/components/ProductPrice';
 import {ProductImage} from '~/components/ProductImage';
 import {ProductForm} from '~/components/ProductForm';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {sanityLanguage} from '~/lib/i18n';
 
 export const meta: Route.MetaFunction = ({data}) => {
   return [
@@ -50,8 +51,8 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
     // Add other queries here, so that they are loaded in parallel
-    sanity.fetch<{descriptionHtml: string | null; image: string | null} | null>
-      (SANITY_PRODUCT_QUERY, {handle}, {tag: 'homepage', hydrogen: {debug: {displayName: 'query Homepage'}},
+    sanity.fetch<{descriptionHtml: string | null; image: string | null; body: unknown[] | null} | null>
+      (SANITY_PRODUCT_QUERY, {handle, language: sanityLanguage(storefront.i18n.language)}, {tag: 'homepage', hydrogen: {debug: {displayName: 'query Homepage'}},
       }),
   ]);
 
@@ -239,5 +240,6 @@ const PRODUCT_QUERY = `#graphql
 
 const SANITY_PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $handle][0]{
     "descriptionHtml": store.descriptionHtml,
-    "image": store.previewImageUrl
+    "image": store.previewImageUrl,
+    "body": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)
   }`;

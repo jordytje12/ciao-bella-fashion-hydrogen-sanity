@@ -10,6 +10,7 @@ import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
 import {urlFor} from '~/lib/sanityImage';
+import {sanityLanguage} from '~/lib/i18n';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -33,7 +34,9 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const [{collections}, sanityHome] = await Promise.all([
     context.storefront.query(FEATURED_COLLECTION_QUERY),
     // Add other queries here, so that they are loaded in parallel
-    context.sanity.fetch(HOME_PAGE_QUERY),
+    context.sanity.fetch(HOME_PAGE_QUERY, {
+      language: sanityLanguage(context.storefront.i18n.language),
+    }),
   ]);
 
   return {
@@ -179,9 +182,9 @@ const FEATURED_COLLECTION_QUERY = `#graphql
 
 const HOME_PAGE_QUERY = `*[_type == "home"][0]{
   hero{
-    title,
-    description,
-    button_text,
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value),
+    "button_text": coalesce(button_text[language == $language][0].value, button_text[language == "nl"][0].value),
     link[]{
       _type,
       _type == "linkInternal" => {
@@ -208,8 +211,8 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     }
   },
   seo{
-    title,
-    description
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value)
   }
 }`;
 

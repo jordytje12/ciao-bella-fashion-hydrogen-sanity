@@ -2,6 +2,17 @@ import type {I18nBase} from '@shopify/hydrogen';
 import {useParams} from 'react-router';
 import {countries} from '~/data/countries';
 
+/** Basistaal voor Sanity content (lowercase, overeenkomend met LANGUAGES ids in studio) */
+export const SANITY_BASE_LANGUAGE = 'nl';
+
+/**
+ * Zet de Hydrogen/Shopify language code (uppercase bv. 'NL', 'EN', 'DE')
+ * om naar de lowercase Sanity taal-id ('nl', 'en', 'de').
+ */
+export function sanityLanguage(language: I18nLocale['language']): string {
+  return language.toLowerCase();
+}
+
 export function useLocalePrefix(): string {
   const {locale} = useParams();
   return locale ? `/${locale}` : '';
