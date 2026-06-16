@@ -4,3 +4,48 @@
  */
 
 @import 'tailwindcss';
+
+/*
+ * -------------------------------------------------------
+ * Brand design tokens — kleuren & typografie
+ *
+ * Kleuren:
+ *   bg-cream        #F5EDE0  achtergrond / gebroken wit
+ *   bg-white        #FFFFFF
+ *   bg-black        #000000  basistekst
+ *   bg-terracotta   #C97B5A  accent / primary
+ *
+ * Fonts:
+ *   font-heading    Cormorant Garamond (serif) — titels
+ *   font-body       DM Sans (sans-serif) — broodtekst
+ *
+ * Gebruik als utility class:   bg-cream, text-terracotta, font-heading, …
+ * Gebruik als CSS-variabele:   var(--color-cream), var(--font-heading), …
+ * -------------------------------------------------------
+ */
+@theme {
+  --color-cream: #f5ede0;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-terracotta: #c97b5a;
+
+  --font-heading: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'DM Sans', system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-cream);
+    color: var(--color-black);
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+  }
+}

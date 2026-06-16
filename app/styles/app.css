@@ -4,8 +4,8 @@
   --cart-aside-summary-height: 250px;
   --grid-item-width: 355px;
   --header-height: 64px;
-  --color-dark: #000;
-  --color-light: #fff;
+  --color-dark: var(--color-black);
+  --color-light: var(--color-white);
 }
 
 img {
