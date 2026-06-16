@@ -19,7 +19,7 @@ export function HeroBanner({
   link,
 }: HeroBannerProps) {
   return (
-    <section className="relative overflow-hidden bg-neutral-950 text-white">
+    <section data-hero className="relative overflow-hidden bg-neutral-950 text-white">
       <img
         alt={imageAlt ?? title}
         className="absolute inset-0 h-full w-full object-cover"
@@ -30,7 +30,7 @@ export function HeroBanner({
 
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(8,8,8,0.12)_0%,rgba(8,8,8,0.38)_45%,rgba(8,8,8,0.74)_100%),linear-gradient(90deg,rgba(8,8,8,0.72)_0%,rgba(8,8,8,0.3)_50%,rgba(8,8,8,0.08)_100%)]" />
 
-      <div className="relative z-10 flex min-h-[28rem] max-w-2xl flex-col justify-end gap-4 px-6 py-8 sm:min-h-[34rem] sm:px-10 sm:py-10 lg:px-14 lg:py-14">
+      <div className="relative z-10 flex min-h-[80vh] max-w-2xl flex-col justify-end gap-4 px-6 py-8 sm:px-10 sm:py-10 lg:px-14 lg:py-14">
         <h1 className="max-w-xl text-4xl font-semibold leading-none tracking-[-0.04em] text-balance sm:text-6xl lg:text-7xl">
           {title}
         </h1>

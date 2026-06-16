@@ -1,5 +1,5 @@
-import {Suspense} from 'react';
-import {Await, NavLink, useAsyncValue} from 'react-router';
+import {Suspense, useState, useEffect} from 'react';
+import {Await, NavLink, useAsyncValue, useLocation} from 'react-router';
 import {
   type CartViewPayload,
   useAnalytics,
@@ -19,6 +19,8 @@ interface HeaderProps {
 
 type Viewport = 'desktop' | 'mobile';
 
+const HEADER_HEIGHT = 64;
+
 export function Header({
   header,
   isLoggedIn,
@@ -27,18 +29,62 @@ export function Header({
 }: HeaderProps) {
   const {shop, menu} = header;
   const localePrefix = useLocalePrefix();
+  const {pathname} = useLocation();
+
+  // Detect homepage (works with or without locale prefix like /en-gb)
+  const rest = pathname.slice(localePrefix.length) || '/';
+  const isHome = rest === '/' || rest === '';
+
+  // Track whether user has scrolled past the hero
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    if (!isHome) {
+      setScrolled(false);
+      return;
+    }
+    const updateScrolled = () => {
+      const hero = document.querySelector<HTMLElement>('[data-hero]');
+      const threshold = hero ? hero.offsetHeight - HEADER_HEIGHT : 200;
+      setScrolled(window.scrollY > threshold);
+    };
+    updateScrolled();
+    window.addEventListener('scroll', updateScrolled, {passive: true});
+    return () => window.removeEventListener('scroll', updateScrolled);
+  }, [isHome]);
+
+  // light = white text/icons: on homepage before scrolling past the hero
+  const light = isHome && !scrolled;
+
+  const headerClass = isHome
+    ? scrolled
+      ? 'header header--home header--scrolled'
+      : 'header header--home'
+    : 'header header--solid';
+
   return (
-    <header className="header">
-      <NavLink reloadDocument to={`${localePrefix}/`} style={activeLinkStyle} end>
-        <strong>{shop.name}</strong>
-      </NavLink>
-      <HeaderMenu
-        menu={menu}
-        viewport="desktop"
-        primaryDomainUrl={header.shop.primaryDomain.url}
-        publicStoreDomain={publicStoreDomain}
-      />
-      <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+    <header className={headerClass}>
+      <div className="header-inner">
+        <div className="header-left">
+          <HeaderMenuMobileToggle />
+          <HeaderMenu
+            menu={menu}
+            viewport="desktop"
+            primaryDomainUrl={header.shop.primaryDomain.url}
+            publicStoreDomain={publicStoreDomain}
+            light={light}
+          />
+        </div>
+        <NavLink
+          reloadDocument
+          to={`${localePrefix}/`}
+          className="header-logo"
+          end
+        >
+          <div className="header-logo-text">Ciao Bella</div>
+        </NavLink>
+        <HeaderCtas isLoggedIn={isLoggedIn} cart={cart} />
+      </div>
     </header>
   );
 }
@@ -48,15 +94,18 @@ export function HeaderMenu({
   primaryDomainUrl,
   viewport,
   publicStoreDomain,
+  light = false,
 }: {
   menu: HeaderProps['header']['menu'];
   primaryDomainUrl: HeaderProps['header']['shop']['primaryDomain']['url'];
   viewport: Viewport;
   publicStoreDomain: HeaderProps['publicStoreDomain'];
+  light?: boolean;
 }) {
   const className = `header-menu-${viewport}`;
   const {close} = useAside();
   const localePrefix = useLocalePrefix();
+  const linkColor = light ? '#fff' : '#000';
 
   return (
     <nav className={className} role="navigation">
@@ -65,7 +114,7 @@ export function HeaderMenu({
           end
           onClick={close}
           prefetch="intent"
-          style={activeLinkStyle}
+          style={({isActive, isPending}) => activeLinkStyle({isActive, isPending}, '#000')}
           to="/"
         >
           Home
@@ -89,7 +138,7 @@ export function HeaderMenu({
             key={item.id}
             onClick={close}
             prefetch="intent"
-            style={activeLinkStyle}
+            style={({isActive, isPending}) => activeLinkStyle({isActive, isPending}, linkColor)}
             to={url}
           >
             {item.title}
@@ -100,23 +149,95 @@ export function HeaderMenu({
   );
 }
 
+function AccountIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <title>Account</title>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+    </svg>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <title>Search</title>
+      <circle cx="11" cy="11" r="7" />
+      <line x1="16.5" y1="16.5" x2="22" y2="22" />
+    </svg>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <title>Cart</title>
+      <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <path d="M16 10a4 4 0 0 1-8 0" />
+    </svg>
+  );
+}
+
 function HeaderCtas({
   isLoggedIn,
   cart,
 }: Pick<HeaderProps, 'isLoggedIn' | 'cart'>) {
   return (
     <nav className="header-ctas" role="navigation">
-      <HeaderMenuMobileToggle />
-      <NavLink prefetch="intent" to="/account" style={activeLinkStyle}>
-        <Suspense fallback="Sign in">
-          <Await resolve={isLoggedIn} errorElement="Sign in">
-            {(isLoggedIn) => (isLoggedIn ? 'Account' : 'Sign in')}
+      <NavLink prefetch="intent" to="/account" className="header-icon-link">
+        <Suspense fallback={<AccountIcon />}>
+          <Await resolve={isLoggedIn} errorElement={<AccountIcon />}>
+            {() => <AccountIcon />}
           </Await>
         </Suspense>
+        <span className="visually-hidden">
+          <Suspense fallback="Sign in">
+            <Await resolve={isLoggedIn} errorElement="Sign in">
+              {(loggedIn) => (loggedIn ? 'Account' : 'Sign in')}
+            </Await>
+          </Suspense>
+        </span>
       </NavLink>
-      <MarketSelector />
       <SearchToggle />
       <CartToggle cart={cart} />
+      <span className="header-market">
+        <MarketSelector />
+      </span>
     </nav>
   );
 }
@@ -136,8 +257,8 @@ function HeaderMenuMobileToggle() {
 function SearchToggle() {
   const {open} = useAside();
   return (
-    <button className="reset" onClick={() => open('search')}>
-      Search
+    <button className="reset header-icon-link" onClick={() => open('search')} aria-label="Search">
+      <SearchIcon />
     </button>
   );
 }
@@ -149,6 +270,8 @@ function CartBadge({count}: {count: number}) {
   return (
     <a
       href="/cart"
+      className="header-icon-link header-cart-link"
+      aria-label={`Cart${count > 0 ? `, ${count} items` : ''}`}
       onClick={(e) => {
         e.preventDefault();
         open('cart');
@@ -160,7 +283,12 @@ function CartBadge({count}: {count: number}) {
         } as CartViewPayload);
       }}
     >
-      Cart <span aria-label={`(items: ${count})`}>{count}</span>
+      <CartIcon />
+      {count > 0 && (
+        <span className="cart-badge" aria-hidden="true">
+          {count}
+        </span>
+      )}
     </a>
   );
 }
@@ -223,15 +351,12 @@ const FALLBACK_HEADER_MENU = {
   ],
 };
 
-function activeLinkStyle({
-  isActive,
-  isPending,
-}: {
-  isActive: boolean;
-  isPending: boolean;
-}) {
+function activeLinkStyle(
+  {isActive, isPending}: {isActive: boolean; isPending: boolean},
+  color: string = '#000',
+) {
   return {
     fontWeight: isActive ? 'bold' : undefined,
-    color: isPending ? 'grey' : 'black',
+    color: isPending ? 'grey' : color,
   };
 }

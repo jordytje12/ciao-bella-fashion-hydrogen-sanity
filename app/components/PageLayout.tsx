@@ -8,6 +8,7 @@ import type {
 import {Aside} from '~/components/Aside';
 import {Footer} from '~/components/Footer';
 import {Header, HeaderMenu} from '~/components/Header';
+import {MarketSelector} from '~/components/LocaleSelector';
 import {CartMain} from '~/components/CartMain';
 import {
   SEARCH_ENDPOINT,
@@ -168,6 +169,9 @@ function MobileMenuAside({
           primaryDomainUrl={header.shop.primaryDomain.url}
           publicStoreDomain={publicStoreDomain}
         />
+        <div className="mobile-market">
+          <MarketSelector />
+        </div>
       </Aside>
     )
   );

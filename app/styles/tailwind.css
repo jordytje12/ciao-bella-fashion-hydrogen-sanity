@@ -40,6 +40,13 @@
     color: var(--color-black);
   }
 
+  a,
+  a:hover,
+  a:focus,
+  a:visited {
+    text-decoration: none;
+  }
+
   h1,
   h2,
   h3,
