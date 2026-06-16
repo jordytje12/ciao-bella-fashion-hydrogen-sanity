@@ -43,11 +43,6 @@ p {
   line-height: 1.4;
 }
 
-a {
-  color: #000;
-  text-decoration: none;
-}
-
 a:hover {
   cursor: pointer;
 }
