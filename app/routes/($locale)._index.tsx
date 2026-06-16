@@ -9,6 +9,7 @@ import type {
 import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
+import {urlFor} from '~/lib/sanityImage';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -64,7 +65,10 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
   const hero = data.sanityHome?.hero;
-  const heroImage = hero?.content?.[0]?.image?.asset?.url;
+  const heroImageData = hero?.content?.[0]?.image;
+  const heroImage = heroImageData
+    ? urlFor(heroImageData).auto('format').fit('crop').url()
+    : null;
   const heroLink = hero?.link?.[0];
   const heroLinkUrl = (() => {
     if (!heroLink) return '/';
