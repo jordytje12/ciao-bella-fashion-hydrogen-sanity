@@ -817,6 +817,7 @@ button.reset:hover:not(:has(> *)) {
   background: var(--color-cream);
   height: var(--topbar-height);
   overflow: hidden;
+  clip-path: inset(0); /* betrouwbaardere clip op mobiel Safari dan overflow:hidden alleen */
   display: flex;
   align-items: center;
   justify-content: center;
