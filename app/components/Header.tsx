@@ -7,6 +7,8 @@ import {
 } from '@shopify/hydrogen';
 import type {HeaderQuery, CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/Aside';
+import {MarketSelector} from '~/components/LocaleSelector';
+import {useLocalePrefix} from '~/lib/i18n';
 
 interface HeaderProps {
   header: HeaderQuery;
@@ -24,9 +26,10 @@ export function Header({
   publicStoreDomain,
 }: HeaderProps) {
   const {shop, menu} = header;
+  const localePrefix = useLocalePrefix();
   return (
     <header className="header">
-      <NavLink prefetch="intent" to="/" style={activeLinkStyle} end>
+      <NavLink reloadDocument to={`${localePrefix}/`} style={activeLinkStyle} end>
         <strong>{shop.name}</strong>
       </NavLink>
       <HeaderMenu
@@ -53,6 +56,7 @@ export function HeaderMenu({
 }) {
   const className = `header-menu-${viewport}`;
   const {close} = useAside();
+  const localePrefix = useLocalePrefix();
 
   return (
     <nav className={className} role="navigation">
@@ -71,12 +75,13 @@ export function HeaderMenu({
         if (!item.url) return null;
 
         // if the url is internal, we strip the domain
-        const url =
+        const rawUrl =
           item.url.includes('myshopify.com') ||
           item.url.includes(publicStoreDomain) ||
           item.url.includes(primaryDomainUrl)
             ? new URL(item.url).pathname
             : item.url;
+        const url = rawUrl.startsWith('/') ? `${localePrefix}${rawUrl}` : rawUrl;
         return (
           <NavLink
             className="header-menu-item"
@@ -109,6 +114,7 @@ function HeaderCtas({
           </Await>
         </Suspense>
       </NavLink>
+      <MarketSelector />
       <SearchToggle />
       <CartToggle cart={cart} />
     </nav>

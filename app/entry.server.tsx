@@ -14,20 +14,33 @@ export default async function handleRequest(
   reactRouterContext: EntryContext,
   context: HydrogenRouterContextProvider,
 ) {
+  const {env, sanity} = context;
+  const {SanityProvider} = sanity;
+  const projectId = env.SANITY_PROJECT_ID;
+  const studioHostname = 'http://localhost:3333';
+  const isPreviewEnabled = sanity.preview?.enabled;
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
+    frameAncestors: isPreviewEnabled ? [studioHostname] : [],
+    defaultSrc: ['https://cdn.sanity.io', 'https://lh3.googleusercontent.com'],
+    connectSrc: [
+      `https://${projectId}.api.sanity.io`,
+      `wss://${projectId}.api.sanity.io`,
+    ],
   });
 
   const body = await renderToReadableStream(
     <NonceProvider>
-      <ServerRouter
-        context={reactRouterContext}
-        url={request.url}
-        nonce={nonce}
-      />
+      <SanityProvider>
+        <ServerRouter
+          context={reactRouterContext}
+          url={request.url}
+          nonce={nonce}
+        />
+      </SanityProvider>
     </NonceProvider>,
     {
       nonce,

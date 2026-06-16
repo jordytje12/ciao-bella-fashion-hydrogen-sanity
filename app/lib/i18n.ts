@@ -1,4 +1,11 @@
 import type {I18nBase} from '@shopify/hydrogen';
+import {useParams} from 'react-router';
+import {countries} from '~/data/countries';
+
+export function useLocalePrefix(): string {
+  const {locale} = useParams();
+  return locale ? `/${locale}` : '';
+}
 
 export interface I18nLocale extends I18nBase {
   pathPrefix: string;
@@ -6,17 +13,20 @@ export interface I18nLocale extends I18nBase {
 
 export function getLocaleFromRequest(request: Request): I18nLocale {
   const url = new URL(request.url);
-  const firstPathPart = url.pathname.split('/')[1]?.toUpperCase() ?? '';
+  const firstPathPart = url.pathname.split('/')[1]?.toLowerCase() ?? '';
+  const locale = countries[firstPathPart];
 
-  type I18nFromUrl = [I18nLocale['language'], I18nLocale['country']];
-
-  let pathPrefix = '';
-  let [language, country]: I18nFromUrl = ['EN', 'US'];
-
-  if (/^[A-Z]{2}-[A-Z]{2}$/i.test(firstPathPart)) {
-    pathPrefix = '/' + firstPathPart;
-    [language, country] = firstPathPart.split('-') as I18nFromUrl;
+  if (locale) {
+    return {
+      language: locale.language,
+      country: locale.country,
+      pathPrefix: `/${firstPathPart}`,
+    };
   }
 
-  return {language, country, pathPrefix};
+  return {
+    language: countries.default.language,
+    country: countries.default.country,
+    pathPrefix: '',
+  };
 }

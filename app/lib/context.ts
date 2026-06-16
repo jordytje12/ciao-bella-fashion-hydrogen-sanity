@@ -1,7 +1,10 @@
 import {createHydrogenContext} from '@shopify/hydrogen';
+import {createSanityContext, type SanityContext} from 'hydrogen-sanity';
 import {AppSession} from '~/lib/session';
 import {CART_QUERY_FRAGMENT} from '~/lib/fragments';
 import {getLocaleFromRequest} from '~/lib/i18n';
+import {PreviewSession} from 'hydrogen-sanity/preview/session';
+import {isPreviewEnabled} from 'hydrogen-sanity/preview';
 
 // Define the additional context object
 const additionalContext = {
@@ -16,7 +19,9 @@ const additionalContext = {
 type AdditionalContextType = typeof additionalContext;
 
 declare global {
-  interface HydrogenAdditionalContext extends AdditionalContextType {}
+  interface HydrogenAdditionalContext extends AdditionalContextType {
+    sanity: SanityContext;
+  }
 }
 
 /**
@@ -36,10 +41,32 @@ export async function createHydrogenRouterContext(
   }
 
   const waitUntil = executionContext.waitUntil.bind(executionContext);
-  const [cache, session] = await Promise.all([
+  const [cache, session, previewSession] = await Promise.all([
     caches.open('hydrogen'),
     AppSession.init(request, [env.SESSION_SECRET]),
+    PreviewSession.init(request, [env.SESSION_SECRET]),
   ]);
+
+  const sanity = await createSanityContext({
+    request,
+    cache,
+    waitUntil,
+
+    client: {
+      projectId: env.SANITY_PROJECT_ID,
+      dataset: env.SANITY_DATASET || 'production',
+      apiVersion: env.SANITY_API_VERSION || 'v2025-11-01',
+      useCdn: true,
+      stega: {
+        enabled: isPreviewEnabled(env.SANITY_PROJECT_ID, previewSession),
+        studioUrl: 'http://localhost:3333',
+      }
+    },
+    preview: {
+      token: env.SANITY_API_TOKEN,
+      session: previewSession,
+    }
+  });
 
   const hydrogenContext = createHydrogenContext(
     {
@@ -54,7 +81,7 @@ export async function createHydrogenRouterContext(
         queryFragment: CART_QUERY_FRAGMENT,
       },
     },
-    additionalContext,
+    {...additionalContext, sanity},
   );
 
   return hydrogenContext;

@@ -1,6 +1,8 @@
 import {Suspense} from 'react';
 import {Await, NavLink} from 'react-router';
 import type {FooterQuery, HeaderQuery} from 'storefrontapi.generated';
+import {LanguageSelector} from '~/components/LocaleSelector';
+import {useLocalePrefix} from '~/lib/i18n';
 
 interface FooterProps {
   footer: Promise<FooterQuery | null>;
@@ -25,6 +27,7 @@ export function Footer({
                 publicStoreDomain={publicStoreDomain}
               />
             )}
+            <LanguageSelector />
           </footer>
         )}
       </Await>
@@ -41,18 +44,21 @@ function FooterMenu({
   primaryDomainUrl: FooterProps['header']['shop']['primaryDomain']['url'];
   publicStoreDomain: string;
 }) {
+  const localePrefix = useLocalePrefix();
+
   return (
     <nav className="footer-menu" role="navigation">
       {(menu || FALLBACK_FOOTER_MENU).items.map((item) => {
         if (!item.url) return null;
         // if the url is internal, we strip the domain
-        const url =
+        const rawUrl =
           item.url.includes('myshopify.com') ||
           item.url.includes(publicStoreDomain) ||
           item.url.includes(primaryDomainUrl)
             ? new URL(item.url).pathname
             : item.url;
-        const isExternal = !url.startsWith('/');
+        const isExternal = !rawUrl.startsWith('/');
+        const url = isExternal ? rawUrl : `${localePrefix}${rawUrl}`;
         return isExternal ? (
           <a href={url} key={item.id} rel="noopener noreferrer" target="_blank">
             {item.title}

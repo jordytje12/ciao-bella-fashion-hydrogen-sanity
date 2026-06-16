@@ -8,6 +8,7 @@ import type {
 } from 'storefrontapi.generated';
 import {ProductItem} from '~/components/ProductItem';
 import {MockShopNotice} from '~/components/MockShopNotice';
+import {HeroBanner} from '~/components/HeroBanner';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -28,14 +29,16 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context}: Route.LoaderArgs) {
-  const [{collections}] = await Promise.all([
+  const [{collections}, sanityHome] = await Promise.all([
     context.storefront.query(FEATURED_COLLECTION_QUERY),
     // Add other queries here, so that they are loaded in parallel
+    context.sanity.fetch(HOME_PAGE_QUERY),
   ]);
 
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     featuredCollection: collections.nodes[0],
+    sanityHome,
   };
 }
 
@@ -60,10 +63,33 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
+  const hero = data.sanityHome?.hero;
+  const heroImage = hero?.content?.[0]?.image?.asset?.url;
+  const heroLink = hero?.link?.[0];
+  const heroLinkUrl = (() => {
+    if (!heroLink) return '/';
+    if (heroLink._type === 'linkExternal') return heroLink.url ?? '/';
+    const ref = heroLink.reference;
+    if (!ref?.slug) return '/';
+    if (ref._type === 'collection') return `/collections/${ref.slug}`;
+    if (ref._type === 'product') return `/products/${ref.slug}`;
+    if (ref._type === 'page') return `/pages/${ref.slug}`;
+    return '/';
+  })();
+
   return (
     <div className="home">
       {data.isShopLinked ? null : <MockShopNotice />}
-      <FeaturedCollection collection={data.featuredCollection} />
+      {hero && heroImage ? (
+        <HeroBanner
+          imageUrl={heroImage}
+          title={hero.title}
+          description={hero.description}
+          link={{text: hero.button_text ?? 'Shop now', url: heroLinkUrl}}
+        />
+      ) : (
+        <FeaturedCollection collection={data.featuredCollection} />
+      )}
       <RecommendedProducts products={data.recommendedProducts} />
     </div>
   );
@@ -146,6 +172,42 @@ const FEATURED_COLLECTION_QUERY = `#graphql
     }
   }
 ` as const;
+
+const HOME_PAGE_QUERY = `*[_type == "home"][0]{
+  hero{
+    title,
+    description,
+    button_text,
+    link[]{
+      _type,
+      _type == "linkInternal" => {
+        reference->{
+          _type,
+          _type in ["collection", "product"] => { "slug": store.slug.current },
+          _type == "page" => { "slug": slug.current }
+        }
+      },
+      _type == "linkExternal" => {
+        url,
+        newWindow
+      }
+    },
+    content[]{
+      _type,
+      _type == "imageWithProductHotspots" => {
+        image{
+          asset->{url, metadata{dimensions}},
+          hotspot,
+          crop
+        }
+      }
+    }
+  },
+  seo{
+    title,
+    description
+  }
+}`;
 
 const RECOMMENDED_PRODUCTS_QUERY = `#graphql
   fragment RecommendedProduct on Product {

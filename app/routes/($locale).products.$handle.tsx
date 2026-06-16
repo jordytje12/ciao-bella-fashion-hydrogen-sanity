@@ -39,17 +39,20 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const {handle} = params;
-  const {storefront} = context;
+  const {storefront, sanity} = context;
 
   if (!handle) {
     throw new Error('Expected product handle to be defined');
   }
 
-  const [{product}] = await Promise.all([
+  const [{product}, sanityProduct] = await Promise.all([
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
     // Add other queries here, so that they are loaded in parallel
+    sanity.fetch<{descriptionHtml: string | null; image: string | null} | null>
+      (SANITY_PRODUCT_QUERY, {handle}, {tag: 'homepage', hydrogen: {debug: {displayName: 'query Homepage'}},
+      }),
   ]);
 
   if (!product?.id) {
@@ -61,6 +64,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
 
   return {
     product,
+    sanityProduct,
   };
 }
 
@@ -77,7 +81,7 @@ function loadDeferredData({context, params}: Route.LoaderArgs) {
 }
 
 export default function Product() {
-  const {product} = useLoaderData<typeof loader>();
+  const {product, sanityProduct} = useLoaderData<typeof loader>();
 
   // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
@@ -102,6 +106,8 @@ export default function Product() {
       <ProductImage image={selectedVariant?.image} />
       <div className="product-main">
         <h1>{title}</h1>
+        {sanityProduct?.image && <img src={sanityProduct.image} alt={product.title} />}
+        {sanityProduct?.descriptionHtml && <div dangerouslySetInnerHTML={{__html: sanityProduct.descriptionHtml}} />}
         <ProductPrice
           price={selectedVariant?.price}
           compareAtPrice={selectedVariant?.compareAtPrice}
@@ -230,3 +236,8 @@ const PRODUCT_QUERY = `#graphql
   }
   ${PRODUCT_FRAGMENT}
 ` as const;
+
+const SANITY_PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $handle][0]{
+    "descriptionHtml": store.descriptionHtml,
+    "image": store.previewImageUrl
+  }`;

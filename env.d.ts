@@ -5,3 +5,13 @@
 
 // Enhance TypeScript's built-in typings.
 import '@total-typescript/ts-reset';
+
+// Sanity global env variables.
+declare global {
+  interface Env extends HydrogenEnv {
+    SANITY_PROJECT_ID: string;
+    SANITY_DATASET: string;
+    SANITY_API_VERSION: string;
+    SANITY_API_TOKEN: string;
+  }
+}
