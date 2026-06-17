@@ -38,6 +38,10 @@ import {
   FeaturedProducts,
   type FeaturedProductItem,
 } from '~/components/FeaturedProducts';
+import {
+  ShopTheLook,
+  type ShopTheLookData,
+} from '~/components/ShopTheLook';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 
@@ -75,6 +79,11 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     sanityHome?.featuredProducts?.products ?? [],
   );
 
+  const shopTheLook = await loadShopTheLook(
+    context,
+    sanityHome?.shopTheLook ?? null,
+  );
+
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     collectionGrid,
@@ -83,6 +92,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     featuredViewAllLabel: (sanityHome?.featuredProducts?.viewAllLabel as string) ?? '',
     featuredViewAllUrl: (sanityHome?.featuredProducts?.viewAllUrl as string) ?? '',
     featuredCollection: collections.nodes[0],
+    shopTheLook,
     sanityHome,
   };
 }
@@ -119,6 +129,54 @@ async function loadCollectionGrid(
     .filter((collection): collection is CollectionGridItem =>
       Boolean(collection),
     );
+}
+
+type SanityShopTheLookRaw = {
+  heading?: string | null;
+  looks?: Array<{
+    image?: object | null;
+    products?: SanityFeaturedProductSelection[] | null;
+  }> | null;
+} | null;
+
+async function loadShopTheLook(
+  context: Route.LoaderArgs['context'],
+  raw: SanityShopTheLookRaw,
+): Promise<ShopTheLookData | null> {
+  if (!raw?.looks?.length) return null;
+
+  // Flatten all product selections across every look (dedupe GIDs)
+  const allSelections = raw.looks.flatMap((look) => look.products ?? []);
+  const productIds = uniqueStrings(allSelections.map((s) => s.productId));
+
+  if (productIds.length === 0) return null;
+
+  const response = (await context.storefront.query(
+    HOMEPAGE_FEATURED_PRODUCTS_QUERY,
+    {variables: {productIds}},
+  )) as HomepageFeaturedProductsQuery;
+
+  const productsById = new Map(
+    (response.products ?? [])
+      .filter(isShopifyProductNode)
+      .map((product) => [product.id, product]),
+  );
+
+  const looks = raw.looks
+    .map((look) => ({
+      image: look.image ?? {},
+      products: (look.products ?? [])
+        .map((sel) => resolveFeaturedProductItem(sel, productsById))
+        .filter((p): p is FeaturedProductItem => Boolean(p)),
+    }))
+    .filter((look) => look.products.length > 0);
+
+  if (!looks.length) return null;
+
+  return {
+    heading: raw.heading ?? '',
+    looks,
+  };
 }
 
 async function loadFeaturedProducts(
@@ -212,6 +270,12 @@ export default function Homepage() {
           minHeightClassName="min-h-[500px] lg:min-h-[640px]"
           headingLevel="h2"
           markAsHero={false}
+        />
+      ) : null}
+      {data.shopTheLook ? (
+        <ShopTheLook
+          heading={data.shopTheLook.heading}
+          looks={data.shopTheLook.looks}
         />
       ) : null}
     </div>
@@ -489,6 +553,17 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     },
     "viewAllLabel": coalesce(viewAll.label[language == $language][0].value, viewAll.label[language == "nl"][0].value),
     "viewAllUrl": viewAll.url
+  },
+  shopTheLook{
+    "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
+    "looks": looks[]{
+      image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
+      "products": products[]->{
+        "productId": store.gid,
+        "handle": store.slug.current,
+        "title": store.title
+      }
+    }
   },
   promoBanner{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),

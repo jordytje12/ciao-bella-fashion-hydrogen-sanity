@@ -871,6 +871,198 @@ button.reset:hover:not(:has(> *)) {
 
 /*
 * --------------------------------------------------
+* components/ShopTheLook
+* --------------------------------------------------
+*/
+.stl {
+  margin: 50px 0;
+  padding: 0 20px;
+  width: 100%;
+}
+
+@media (min-width: 48em) {
+  .stl {
+    padding: 0 50px;
+  }
+}
+
+@media (min-width: 64em) {
+  .stl {
+    margin: 100px 0;
+    padding: 0 50px;
+  }
+}
+
+/* Two-column layout: image left (larger), products right */
+.stl__columns {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+}
+
+@media (min-width: 64em) {
+  .stl__columns {
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    gap: 3rem;
+  }
+}
+
+/* ── Left column ── */
+.stl__left {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Scroll-snap image track: one look at a time */
+.stl__image-track {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 4px;
+}
+
+.stl__image-track::-webkit-scrollbar {
+  display: none;
+}
+
+.stl__image-slide {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  overflow: hidden;
+}
+
+.stl__image {
+  aspect-ratio: 3 / 4;
+  display: block;
+  height: auto;
+  object-fit: cover;
+  width: 100%;
+}
+
+/* Dots */
+.stl__dots {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.stl__dot {
+  background: #ccc;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  height: 8px;
+  padding: 0;
+  transition: background 0.2s;
+  width: 8px;
+}
+
+.stl__dot--active {
+  background: #1c1a18;
+}
+
+/* ── Right column ── */
+.stl__right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.stl__heading {
+  color: #1c1a18;
+  font-family: "Cormorant Garamond";
+  font-size: 28px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: normal;
+  margin: 0;
+  text-align: center;
+}
+
+@media (min-width: 64em) {
+  .stl__heading {
+    font-size: 48px;
+  }
+}
+
+/* Product row: arrow – card – arrow */
+.stl__products {
+  align-items: center;
+  display: flex;
+  gap: 1rem;
+}
+
+.stl__arrow {
+  align-items: center;
+  background: none;
+  border: 1px solid #000;
+  border-radius: 50px;
+  color: #000;
+  cursor: pointer;
+  display: flex;
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  height: 2rem;
+  justify-content: center;
+  line-height: 1;
+  transition: opacity 0.2s;
+  width: 2rem;
+}
+
+.stl__arrow:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+/* Centered product card */
+.stl-card {
+  color: inherit;
+  display: block;
+  flex: 1;
+  text-align: center;
+  text-decoration: none;
+}
+
+.stl-card__image {
+  aspect-ratio: 4 / 5;
+  overflow: hidden;
+  width: 100%;
+}
+
+.stl-card__image img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.stl-card__title,
+.stl-card__price {
+  color: #000;
+  display: block;
+  font-family: var(--font-heading);
+  font-style: normal;
+  line-height: normal;
+  text-align: center;
+}
+
+.stl-card__title {
+  font-size: 16px;
+  font-weight: 400;
+  margin-bottom: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.stl-card__price {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/*
+* --------------------------------------------------
 * routes/collections._index.tsx
 * --------------------------------------------------
 */
