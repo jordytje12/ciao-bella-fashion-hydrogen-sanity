@@ -152,24 +152,33 @@ async function loadFeaturedProducts(
     .filter((p): p is FeaturedProductItem => Boolean(p));
 }
 
+function resolveLinkUrl(link: {_type: string; url?: string; reference?: {_type: string; slug?: string}} | undefined): string {
+  if (!link) return '/';
+  if (link._type === 'linkExternal') return link.url ?? '/';
+  const ref = link.reference;
+  if (!ref?.slug) return '/';
+  if (ref._type === 'collection') return `/collections/${ref.slug}`;
+  if (ref._type === 'product') return `/products/${ref.slug}`;
+  if (ref._type === 'page') return `/pages/${ref.slug}`;
+  return '/';
+}
+
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
+
   const hero = data.sanityHome?.hero;
   const desktopData = hero?.imageDesktop;
   const mobileData = hero?.imageMobile;
   const desktopImage = desktopData ? urlFor(desktopData).auto('format').fit('crop').url() : null;
   const mobileImage = mobileData ? urlFor(mobileData).auto('format').fit('crop').url() : null;
-  const heroLink = hero?.link?.[0];
-  const heroLinkUrl = (() => {
-    if (!heroLink) return '/';
-    if (heroLink._type === 'linkExternal') return heroLink.url ?? '/';
-    const ref = heroLink.reference;
-    if (!ref?.slug) return '/';
-    if (ref._type === 'collection') return `/collections/${ref.slug}`;
-    if (ref._type === 'product') return `/products/${ref.slug}`;
-    if (ref._type === 'page') return `/pages/${ref.slug}`;
-    return '/';
-  })();
+  const heroLinkUrl = resolveLinkUrl(hero?.link?.[0]);
+
+  const promo = data.sanityHome?.promoBanner;
+  const promoDesktopData = promo?.imageDesktop;
+  const promoMobileData = promo?.imageMobile;
+  const promoDesktopImage = promoDesktopData ? urlFor(promoDesktopData).auto('format').fit('crop').url() : null;
+  const promoMobileImage = promoMobileData ? urlFor(promoMobileData).auto('format').fit('crop').url() : null;
+  const promoLinkUrl = resolveLinkUrl(promo?.link?.[0]);
 
   return (
     <div className="home">
@@ -192,6 +201,19 @@ export default function Homepage() {
         viewAllLabel={data.featuredViewAllLabel}
         viewAllUrl={data.featuredViewAllUrl}
       />
+      {promo && promoDesktopImage ? (
+        <HeroBanner
+          imageUrl={promoDesktopImage}
+          mobileImageUrl={promoMobileImage ?? promoDesktopImage}
+          title={promo.title}
+          description={promo.description}
+          link={{text: promo.button_text ?? 'Shop now', url: promoLinkUrl}}
+          buttonVariant="filled"
+          minHeightClassName="min-h-[500px] lg:min-h-[640px]"
+          headingLevel="h2"
+          markAsHero={false}
+        />
+      ) : null}
     </div>
   );
 }
@@ -467,6 +489,27 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     },
     "viewAllLabel": coalesce(viewAll.label[language == $language][0].value, viewAll.label[language == "nl"][0].value),
     "viewAllUrl": viewAll.url
+  },
+  promoBanner{
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value),
+    "button_text": coalesce(button_text[language == $language][0].value, button_text[language == "nl"][0].value),
+    link[]{
+      _type,
+      _type == "linkInternal" => {
+        reference->{
+          _type,
+          _type in ["collection", "product"] => { "slug": store.slug.current },
+          _type == "page" => { "slug": slug.current }
+        }
+      },
+      _type == "linkExternal" => {
+        url,
+        newWindow
+      }
+    },
+    imageDesktop{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
+    imageMobile{ asset->{_id, url, metadata{dimensions}}, hotspot, crop }
   },
   seo{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
