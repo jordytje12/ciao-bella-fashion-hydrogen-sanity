@@ -1,19 +1,43 @@
-import {Await, useLoaderData, Link} from 'react-router';
+import {useLoaderData, Link} from 'react-router';
 import type {Route} from './+types/_index';
-import {Suspense} from 'react';
 import {Image} from '@shopify/hydrogen';
+import type {CurrencyCode} from '@shopify/hydrogen/storefront-api-types';
 import type {
   FeaturedCollectionFragment,
   HomepageCollectionGridQuery,
-  RecommendedProductsQuery,
 } from 'storefrontapi.generated';
-import {ProductItem} from '~/components/ProductItem';
+
+// Local type until `npm run codegen` generates HomepageFeaturedProductsQuery
+type HomepageFeaturedProductsQuery = {
+  products: Array<{
+    id: string;
+    title: string;
+    handle: string;
+    featuredImage: {
+      id?: string | null;
+      url: string;
+      altText?: string | null;
+      width?: number | null;
+      height?: number | null;
+    } | null;
+    priceRange: {
+      minVariantPrice: {
+        amount: string;
+        currencyCode: CurrencyCode;
+      };
+    };
+  } | null>;
+};
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
 import {
   CollectionGrid,
   type CollectionGridItem,
 } from '~/components/CollectionGrid';
+import {
+  FeaturedProducts,
+  type FeaturedProductItem,
+} from '~/components/FeaturedProducts';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 
@@ -22,13 +46,10 @@ export const meta: Route.MetaFunction = () => {
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  return {...deferredData, ...criticalData};
+  return {...criticalData};
 }
 
 /**
@@ -43,14 +64,24 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
       language: sanityLanguage(context.storefront.i18n.language),
     }),
   ]);
+
   const collectionGrid = await loadCollectionGrid(
     context,
     sanityHome?.collectionGrid?.cards ?? [],
   );
 
+  const featuredProducts = await loadFeaturedProducts(
+    context,
+    sanityHome?.featuredProducts?.products ?? [],
+  );
+
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     collectionGrid,
+    featuredProducts,
+    featuredHeading: (sanityHome?.featuredProducts?.heading as string) ?? '',
+    featuredViewAllLabel: (sanityHome?.featuredProducts?.viewAllLabel as string) ?? '',
+    featuredViewAllUrl: (sanityHome?.featuredProducts?.viewAllUrl as string) ?? '',
     featuredCollection: collections.nodes[0],
     sanityHome,
   };
@@ -90,23 +121,35 @@ async function loadCollectionGrid(
     );
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context}: Route.LoaderArgs) {
-  const recommendedProducts = context.storefront
-    .query(RECOMMENDED_PRODUCTS_QUERY)
-    .catch((error: Error) => {
-      // Log query errors, but don't throw them so the page can still render
-      console.error(error);
-      return null;
-    });
+async function loadFeaturedProducts(
+  context: Route.LoaderArgs['context'],
+  selections: SanityFeaturedProductSelection[],
+): Promise<FeaturedProductItem[]> {
+  const productIds = uniqueStrings(
+    selections.map((selection) => selection.productId),
+  );
 
-  return {
-    recommendedProducts,
-  };
+  if (productIds.length === 0) return [];
+
+  const response = (await context.storefront.query(
+    HOMEPAGE_FEATURED_PRODUCTS_QUERY,
+    {
+      variables: {
+        productIds,
+      },
+    },
+  )) as HomepageFeaturedProductsQuery;
+
+  const productsById = new Map(
+    (response.products ?? [])
+      .filter(isShopifyProductNode)
+      .map((product) => [product.id, product]),
+  );
+
+  // Preserve Sanity ordering
+  return selections
+    .map((selection) => resolveFeaturedProductItem(selection, productsById))
+    .filter((p): p is FeaturedProductItem => Boolean(p));
 }
 
 export default function Homepage() {
@@ -143,7 +186,12 @@ export default function Homepage() {
         <FeaturedCollection collection={data.featuredCollection} />
       )}
       <CollectionGrid collections={data.collectionGrid} />
-      <RecommendedProducts products={data.recommendedProducts} />
+      <FeaturedProducts
+        heading={data.featuredHeading}
+        products={data.featuredProducts}
+        viewAllLabel={data.featuredViewAllLabel}
+        viewAllUrl={data.featuredViewAllUrl}
+      />
     </div>
   );
 }
@@ -171,35 +219,6 @@ function FeaturedCollection({
       )}
       <h1>{collection.title}</h1>
     </Link>
-  );
-}
-
-function RecommendedProducts({
-  products,
-}: {
-  products: Promise<RecommendedProductsQuery | null>;
-}) {
-  return (
-    <section
-      className="recommended-products"
-      aria-labelledby="recommended-products"
-    >
-      <h2 id="recommended-products">Recommended Products</h2>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Await resolve={products}>
-          {(response) => (
-            <div className="recommended-products-grid">
-              {response
-                ? response.products.nodes.map((product) => (
-                    <ProductItem key={product.id} product={product} />
-                  ))
-                : null}
-            </div>
-          )}
-        </Await>
-      </Suspense>
-      <br />
-    </section>
   );
 }
 
@@ -249,6 +268,16 @@ type SanityCollectionCardImage = {
   } | null;
 };
 
+type SanityFeaturedProductSelection = {
+  productId?: string | null;
+  handle?: string | null;
+  title?: string | null;
+};
+
+type ShopifyProductNode = NonNullable<
+  HomepageFeaturedProductsQuery['products'][number]
+>;
+
 function uniqueStrings(values: Array<string | null | undefined>) {
   return Array.from(
     new Set(values.filter((value): value is string => Boolean(value))),
@@ -258,6 +287,12 @@ function uniqueStrings(values: Array<string | null | undefined>) {
 function isShopifyCollectionNode(
   node: HomepageCollectionGridQuery['collections'][number],
 ): node is ShopifyCollectionNode {
+  return Boolean(node);
+}
+
+function isShopifyProductNode(
+  node: HomepageFeaturedProductsQuery['products'][number],
+): node is ShopifyProductNode {
   return Boolean(node);
 }
 
@@ -295,6 +330,35 @@ function resolveCollectionGridItem(
   };
 }
 
+function resolveFeaturedProductItem(
+  selection: SanityFeaturedProductSelection,
+  productsById: Map<string, ShopifyProductNode>,
+): FeaturedProductItem | null {
+  if (!selection.productId) return null;
+
+  const product = productsById.get(selection.productId);
+  if (!product) return null;
+
+  const title = product.title || selection.title;
+  const handle = product.handle || selection.handle;
+  if (!title || !handle) return null;
+
+  return {
+    id: product.id,
+    title,
+    handle,
+    image: product.featuredImage
+      ? {
+          url: product.featuredImage.url,
+          altText: product.featuredImage.altText,
+          width: product.featuredImage.width,
+          height: product.featuredImage.height,
+        }
+      : null,
+    price: product.priceRange.minVariantPrice,
+  };
+}
+
 const HOMEPAGE_COLLECTION_GRID_QUERY = `#graphql
   fragment HomepageCollectionGridCollection on Collection {
     __typename
@@ -311,6 +375,39 @@ const HOMEPAGE_COLLECTION_GRID_QUERY = `#graphql
     collections: nodes(ids: $collectionIds) {
       ... on Collection {
         ...HomepageCollectionGridCollection
+      }
+    }
+  }
+` as const;
+
+const HOMEPAGE_FEATURED_PRODUCTS_QUERY = `#graphql
+  fragment HomepageFeaturedProduct on Product {
+    id
+    title
+    handle
+    featuredImage {
+      id
+      url
+      altText
+      width
+      height
+    }
+    priceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+  }
+
+  query HomepageFeaturedProducts(
+    $productIds: [ID!]!
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    products: nodes(ids: $productIds) {
+      ... on Product {
+        ...HomepageFeaturedProduct
       }
     }
   }
@@ -361,37 +458,18 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
       }
     }
   },
+  featuredProducts{
+    "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
+    "products": products[]->{
+      "productId": store.gid,
+      "handle": store.slug.current,
+      "title": store.title
+    },
+    "viewAllLabel": coalesce(viewAll.label[language == $language][0].value, viewAll.label[language == "nl"][0].value),
+    "viewAllUrl": viewAll.url
+  },
   seo{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
     "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value)
   }
 }`;
-
-const RECOMMENDED_PRODUCTS_QUERY = `#graphql
-  fragment RecommendedProduct on Product {
-    id
-    title
-    handle
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-    featuredImage {
-      id
-      url
-      altText
-      width
-      height
-    }
-  }
-  query RecommendedProducts ($country: CountryCode, $language: LanguageCode)
-    @inContext(country: $country, language: $language) {
-    products(first: 4, sortKey: UPDATED_AT, reverse: true) {
-      nodes {
-        ...RecommendedProduct
-      }
-    }
-  }
-` as const;
