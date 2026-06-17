@@ -615,8 +615,8 @@ button.reset:hover:not(:has(> *)) {
   grid-column: span 2; /* 3 per rij op mobiel/tablet */
 }
 
-.home-collection-grid__items > .home-collection-card:nth-child(4),
-.home-collection-grid__items > .home-collection-card:nth-child(5) {
+.home-collection-grid__items > .home-collection-card:nth-of-type(4),
+.home-collection-grid__items > .home-collection-card:nth-of-type(5) {
   grid-column: span 3; /* laatste 2 cards samen volle breedte */
 }
 
@@ -626,8 +626,8 @@ button.reset:hover:not(:has(> *)) {
   }
 
   .home-collection-grid__items > .home-collection-card,
-  .home-collection-grid__items > .home-collection-card:nth-child(4),
-  .home-collection-grid__items > .home-collection-card:nth-child(5) {
+  .home-collection-grid__items > .home-collection-card:nth-of-type(4),
+  .home-collection-grid__items > .home-collection-card:nth-of-type(5) {
     grid-column: auto; /* desktop: 5 op één rij, geen span */
   }
 }
@@ -663,7 +663,6 @@ button.reset:hover:not(:has(> *)) {
   inset: 0;
   object-fit: cover;
   position: absolute;
-  transition: transform 420ms cubic-bezier(0.16, 1, 0.3, 1);
   width: 100%;
 }
 
@@ -673,11 +672,6 @@ button.reset:hover:not(:has(> *)) {
   height: 100%;
   object-fit: cover;
   width: 100%;
-}
-
-.home-collection-card:hover .home-collection-card__image,
-.home-collection-card:focus-visible .home-collection-card__image {
-  transform: scale(1.035);
 }
 
 .home-collection-card__title {
@@ -758,14 +752,12 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .home-featured__viewall {
-  border: 1px solid #000;
   color: #000;
   font-family: "Cormorant Garamond";
   font-size: 13px;
   font-weight: 400;
   line-height: normal;
-  padding: 0.4rem 0.85rem;
-  text-decoration: none;
+  text-decoration: underline;
 }
 
 .home-featured__nav {
@@ -795,6 +787,7 @@ button.reset:hover:not(:has(> *)) {
   justify-content: center;
   line-height: 1;
   width: 2rem;
+  border-radius: 50px;
 }
 
 .home-featured__track {

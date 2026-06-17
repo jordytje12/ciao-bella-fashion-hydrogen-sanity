@@ -51,7 +51,7 @@ export function CollectionCard({
     <Link
       className="home-collection-card"
       to={`/collections/${collection.handle}`}
-      prefetch="intent"
+      prefetch="viewport"
     >
       <img
         alt={collection.image.altText || collection.title}
