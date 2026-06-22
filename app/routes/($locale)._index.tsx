@@ -42,6 +42,7 @@ import {
   ShopTheLook,
   type ShopTheLookData,
 } from '~/components/ShopTheLook';
+import {DualCardBanner, type DualCardItem} from '~/components/DualCardBanner';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 
@@ -84,6 +85,8 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     sanityHome?.shopTheLook ?? null,
   );
 
+  const dualCardBanner = resolveDualCardBanner(sanityHome?.dualCardBanner?.cards ?? []);
+
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     collectionGrid,
@@ -93,6 +96,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     featuredViewAllUrl: (sanityHome?.featuredProducts?.viewAllUrl as string) ?? '',
     featuredCollection: collections.nodes[0],
     shopTheLook,
+    dualCardBanner,
     sanityHome,
   };
 }
@@ -130,6 +134,23 @@ async function loadCollectionGrid(
       Boolean(collection),
     );
 }
+
+type SanityDualCardRaw = {
+  image?: {
+    asset?: {
+      url?: string | null;
+      metadata?: {dimensions?: {width?: number | null; height?: number | null} | null} | null;
+    } | null;
+  } | null;
+  title?: string | null;
+  subtitle?: string | null;
+  buttonText?: string | null;
+  link?: Array<{
+    _type: string;
+    url?: string;
+    reference?: {_type: string; slug?: string};
+  }> | null;
+};
 
 type SanityShopTheLookRaw = {
   heading?: string | null;
@@ -210,6 +231,28 @@ async function loadFeaturedProducts(
     .filter((p): p is FeaturedProductItem => Boolean(p));
 }
 
+function resolveDualCardBanner(rawCards: SanityDualCardRaw[]): DualCardItem[] {
+  const result: DualCardItem[] = [];
+  for (const card of rawCards) {
+    if (!card.image?.asset?.url) continue;
+    const imageUrl = urlFor(card.image as Parameters<typeof urlFor>[0])
+      .width(1200)
+      .height(1500)
+      .auto('format')
+      .fit('crop')
+      .url();
+    if (!imageUrl) continue;
+    result.push({
+      image: {url: imageUrl, altText: card.title ?? undefined},
+      title: card.title ?? '',
+      subtitle: card.subtitle ?? null,
+      buttonText: card.buttonText ?? null,
+      url: resolveLinkUrl(card.link?.[0]),
+    });
+  }
+  return result;
+}
+
 function resolveLinkUrl(link: {_type: string; url?: string; reference?: {_type: string; slug?: string}} | undefined): string {
   if (!link) return '/';
   if (link._type === 'linkExternal') return link.url ?? '/';
@@ -277,6 +320,9 @@ export default function Homepage() {
           heading={data.shopTheLook.heading}
           looks={data.shopTheLook.looks}
         />
+      ) : null}
+      {data.dualCardBanner.length === 2 ? (
+        <DualCardBanner cards={data.dualCardBanner} />
       ) : null}
     </div>
   );
@@ -562,6 +608,28 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
         "productId": store.gid,
         "handle": store.slug.current,
         "title": store.title
+      }
+    }
+  },
+  dualCardBanner{
+    cards[]{
+      image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
+      "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+      "subtitle": coalesce(subtitle[language == $language][0].value, subtitle[language == "nl"][0].value),
+      "buttonText": coalesce(buttonText[language == $language][0].value, buttonText[language == "nl"][0].value),
+      link[]{
+        _type,
+        _type == "linkInternal" => {
+          reference->{
+            _type,
+            _type in ["collection", "product"] => { "slug": store.slug.current },
+            _type == "page" => { "slug": slug.current }
+          }
+        },
+        _type == "linkExternal" => {
+          url,
+          newWindow
+        }
       }
     }
   },
