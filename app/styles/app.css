@@ -1526,13 +1526,13 @@ button.reset:hover:not(:has(> *)) {
   display: none;
 }
 
-/* mobiel: 2 zichtbaar */
+/* mobiel: 1 zichtbaar */
 .home-reviews__card {
   background: #fff;
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
   display: flex;
-  flex: 0 0 calc((100% - 1 * var(--reviews-gap)) / 2);
+  flex: 0 0 100%;
   flex-direction: column;
   gap: 0.625rem;
   padding: clamp(1.125rem, 2vw, 1.5rem);
