@@ -44,6 +44,10 @@ import {
 } from '~/components/ShopTheLook';
 import {DualCardBanner, type DualCardItem} from '~/components/DualCardBanner';
 import {Reviews, type ReviewsData} from '~/components/Reviews';
+import {
+  InstagramCards,
+  type InstagramCardsData,
+} from '~/components/InstagramCards';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 
@@ -93,6 +97,10 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     (sanityHome?.featuredReviews as SanityReviewItemRaw[]) ?? [],
   );
 
+  const instagramCards = resolveInstagramCards(
+    (sanityHome?.instagramCards as SanityInstagramCardsRaw) ?? null,
+  );
+
   return {
     isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     collectionGrid,
@@ -104,6 +112,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     shopTheLook,
     dualCardBanner,
     reviews,
+    instagramCards,
     sanityHome,
   };
 }
@@ -176,6 +185,25 @@ type SanityReviewsConfigRaw = {
   caption?: string | null;
   trustpilotLabel?: string | null;
   trustpilotUrl?: string | null;
+} | null;
+
+type SanityInstagramCardRaw = {
+  image?: {
+    asset?: {
+      url?: string | null;
+      metadata?: {dimensions?: {width?: number | null; height?: number | null} | null} | null;
+    } | null;
+  } | null;
+  username?: string | null;
+  handle?: string | null;
+  title?: string | null;
+};
+
+type SanityInstagramCardsRaw = {
+  heading?: string | null;
+  instagramHandle?: string | null;
+  instagramUrl?: string | null;
+  cards?: SanityInstagramCardRaw[] | null;
 } | null;
 
 type SanityShopTheLookRaw = {
@@ -317,6 +345,36 @@ function resolveReviews(
   };
 }
 
+function resolveInstagramCards(raw: SanityInstagramCardsRaw): InstagramCardsData | null {
+  if (!raw?.cards?.length) return null;
+
+  const cards = raw.cards
+    .filter((card) => card.image?.asset?.url && card.handle && card.username)
+    .map((card) => ({
+      image: {
+        url: urlFor(card.image as Parameters<typeof urlFor>[0])
+          .width(800)
+          .height(1000)
+          .auto('format')
+          .fit('crop')
+          .url(),
+      },
+      username: card.username!,
+      title: card.title ?? '',
+      handle: card.handle!,
+    }))
+    .filter((card) => Boolean(card.image.url));
+
+  if (!cards.length) return null;
+
+  return {
+    heading: raw.heading ?? '',
+    instagramHandle: raw.instagramHandle ?? null,
+    instagramUrl: raw.instagramUrl ?? null,
+    cards,
+  };
+}
+
 function resolveLinkUrl(link: {_type: string; url?: string; reference?: {_type: string; slug?: string}} | undefined): string {
   if (!link) return '/';
   if (link._type === 'linkExternal') return link.url ?? '/';
@@ -389,6 +447,7 @@ export default function Homepage() {
         <DualCardBanner cards={data.dualCardBanner} />
       ) : null}
       {data.reviews ? <Reviews data={data.reviews} /> : null}
+      {data.instagramCards ? <InstagramCards data={data.instagramCards} /> : null}
     </div>
   );
 }
@@ -734,6 +793,17 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     "caption": coalesce(caption[language == $language][0].value, caption[language == "nl"][0].value),
     "trustpilotLabel": trustpilotLabel,
     "trustpilotUrl": trustpilotUrl
+  },
+  instagramCards{
+    "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
+    instagramHandle,
+    instagramUrl,
+    "cards": cards[]{
+      image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
+      username,
+      "handle": product->store.slug.current,
+      "title": product->store.title
+    }
   },
   "featuredReviews": *[_type == "review" && featured == true] | order(date desc) [0...9] {
     _id,

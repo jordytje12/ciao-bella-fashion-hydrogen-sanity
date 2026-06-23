@@ -1663,3 +1663,105 @@ button.reset:hover:not(:has(> *)) {
   font-size: 1.125rem;
   line-height: 1;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Instagram cards
+───────────────────────────────────────────────────────────────────────────── */
+
+.home-instagram {
+  padding: 3rem 1.25rem;
+}
+
+.home-instagram__header {
+  align-items: baseline;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.home-instagram__heading {
+  font-family: var(--font-heading, serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.home-instagram__handle {
+  color: var(--color-dark, #1a1a1a);
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.home-instagram__handle:hover {
+  text-decoration: underline;
+}
+
+.home-instagram__items {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.home-instagram__card {
+  display: block;
+  overflow: hidden;
+  position: relative;
+}
+
+.home-instagram__image {
+  aspect-ratio: 4 / 5;
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+  width: 100%;
+}
+
+.home-instagram__card:hover .home-instagram__image {
+  transform: scale(1.03);
+}
+
+.home-instagram__overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 60%);
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  left: 0;
+  padding: 1rem 0.75rem 0.75rem;
+  position: absolute;
+  right: 0;
+}
+
+.home-instagram__username {
+  color: #fff;
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.home-instagram__title {
+  color: rgba(255, 255, 255, 0.9);
+  font-family: var(--font-body, sans-serif);
+  font-size: 0.8125rem;
+  font-weight: 400;
+}
+
+@media (min-width: 64em) {
+  .home-instagram {
+    padding: 4rem 2rem;
+  }
+
+  .home-instagram__heading {
+    font-size: 2rem;
+  }
+
+  .home-instagram__items {
+    gap: 0.75rem;
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
