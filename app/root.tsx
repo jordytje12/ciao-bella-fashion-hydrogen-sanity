@@ -12,8 +12,9 @@ import {
 } from 'react-router';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
-import {FOOTER_QUERY, HEADER_QUERY} from '~/lib/fragments';
+import {HEADER_QUERY} from '~/lib/fragments';
 import {sanityLanguage} from '~/lib/i18n';
+import type {FooterData} from '~/components/Footer';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
@@ -115,7 +116,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const {storefront, sanity} = context;
   const language = sanityLanguage(storefront.i18n.language);
 
-  const [header, sanitySettings] = await Promise.all([
+  const [header, sanitySettings, footerData] = await Promise.all([
     storefront.query(HEADER_QUERY, {
       cache: storefront.CacheLong(),
       variables: {
@@ -126,12 +127,15 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
       TOPBAR_QUERY,
       {language},
     ),
+    sanity.fetch<FooterData | null>(SANITY_FOOTER_QUERY, {language}).catch(
+      () => null,
+    ),
   ]);
 
   const topbarUsps =
-    sanitySettings?.usps?.filter((item) => Boolean(item.text)) ?? [];
+    sanitySettings?.usps?.filter((item: {text: string; iconUrl: string | null}) => Boolean(item.text)) ?? [];
 
-  return {header, topbarUsps};
+  return {header, topbarUsps, footer: footerData};
 }
 
 /**
@@ -140,25 +144,11 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
  * Make sure to not throw any errors here, as it will cause the page to 500.
  */
 function loadDeferredData({context}: Route.LoaderArgs) {
-  const {storefront, customerAccount, cart} = context;
+  const {customerAccount, cart} = context;
 
-  // defer the footer query (below the fold)
-  const footer = storefront
-    .query(FOOTER_QUERY, {
-      cache: storefront.CacheLong(),
-      variables: {
-        footerMenuHandle: 'footer', // Adjust to your footer menu handle
-      },
-    })
-    .catch((error: Error) => {
-      // Log query errors, but don't throw them so the page can still render
-      console.error(error);
-      return null;
-    });
   return {
     cart: cart.get(),
     isLoggedIn: customerAccount.isLoggedIn(),
-    footer,
   };
 }
 
@@ -245,4 +235,39 @@ const TOPBAR_QUERY = `*[_type == "settings"][0]{
     "text": coalesce(text[language == $language][0].value, text[language == "nl"][0].value),
     "iconUrl": icon.asset->url
   }
+}`;
+
+const SANITY_FOOTER_QUERY = `*[_type == "footer"][0]{
+  "uspCards": uspCards[]{
+    "iconUrl": icon.asset->url,
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "subtext": coalesce(subtext[language == $language][0].value, subtext[language == "nl"][0].value)
+  },
+  "brandTitle": coalesce(brandTitle[language == $language][0].value, brandTitle[language == "nl"][0].value),
+  "brandText": coalesce(brandText[language == $language][0].value, brandText[language == "nl"][0].value),
+  "socialLinks": socialLinks[]{
+    platform,
+    url
+  },
+  "menuColumns": menuColumns[]{
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "links": links[]{
+      "label": coalesce(label[language == $language][0].value, label[language == "nl"][0].value),
+      "link": link[0]{
+        _type,
+        url,
+        "reference": reference->{
+          _type,
+          "slug": select(
+            _type in ["collection", "product"] => store.slug.current,
+            _type == "page" => slug.current
+          )
+        }
+      }
+    }
+  },
+  "newsletterTitle": coalesce(newsletterTitle[language == $language][0].value, newsletterTitle[language == "nl"][0].value),
+  "newsletterText": coalesce(newsletterText[language == $language][0].value, newsletterText[language == "nl"][0].value),
+  klaviyoCompanyId,
+  klaviyoFormId
 }`;

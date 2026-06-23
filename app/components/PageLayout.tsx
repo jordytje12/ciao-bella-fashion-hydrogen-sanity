@@ -2,11 +2,10 @@ import {Await, Link} from 'react-router';
 import {Suspense, useId} from 'react';
 import type {
   CartApiQueryFragment,
-  FooterQuery,
   HeaderQuery,
 } from 'storefrontapi.generated';
 import {Aside} from '~/components/Aside';
-import {Footer} from '~/components/Footer';
+import {Footer, type FooterData} from '~/components/Footer';
 import {Header, HeaderMenu} from '~/components/Header';
 import {MarketSelector} from '~/components/LocaleSelector';
 import {CartMain} from '~/components/CartMain';
@@ -19,7 +18,7 @@ import {Topbar, type TopbarUsp} from '~/components/Topbar';
 
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
-  footer: Promise<FooterQuery | null>;
+  footer?: FooterData | null;
   header: HeaderQuery;
   isLoggedIn: Promise<boolean>;
   publicStoreDomain: string;
@@ -51,11 +50,7 @@ export function PageLayout({
         />
       )}
       <main>{children}</main>
-      <Footer
-        footer={footer}
-        header={header}
-        publicStoreDomain={publicStoreDomain}
-      />
+      <Footer footer={footer ?? null} />
     </Aside.Provider>
   );
 }
