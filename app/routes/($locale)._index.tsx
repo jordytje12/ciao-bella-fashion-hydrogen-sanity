@@ -1,33 +1,10 @@
 import {useLoaderData, Link} from 'react-router';
-import type {Route} from './+types/_index';
+import type {Route} from './+types/($locale)._index';
 import {Image} from '@shopify/hydrogen';
-import type {CurrencyCode} from '@shopify/hydrogen/storefront-api-types';
 import type {
   FeaturedCollectionFragment,
   HomepageCollectionGridQuery,
 } from 'storefrontapi.generated';
-
-// Local type until `npm run codegen` generates HomepageFeaturedProductsQuery
-type HomepageFeaturedProductsQuery = {
-  products: Array<{
-    id: string;
-    title: string;
-    handle: string;
-    featuredImage: {
-      id?: string | null;
-      url: string;
-      altText?: string | null;
-      width?: number | null;
-      height?: number | null;
-    } | null;
-    priceRange: {
-      minVariantPrice: {
-        amount: string;
-        currencyCode: CurrencyCode;
-      };
-    };
-  } | null>;
-};
 import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
 import {
@@ -42,7 +19,7 @@ import {
   ShopTheLook,
   type ShopTheLookData,
 } from '~/components/ShopTheLook';
-import {DualCardBanner, type DualCardItem} from '~/components/DualCardBanner';
+import {DualCardBanner} from '~/components/DualCardBanner';
 import {Reviews, type ReviewsData} from '~/components/Reviews';
 import {
   InstagramCards,
@@ -50,6 +27,14 @@ import {
 } from '~/components/InstagramCards';
 import {urlFor} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
+import {
+  hydrateProductsByGid,
+  resolveDualCardBanner,
+  resolveFeaturedProductItem,
+  resolveLinkUrl,
+  uniqueStrings,
+  type SanityFeaturedProductSelection,
+} from '~/lib/sanityModules';
 
 export const meta: Route.MetaFunction = () => {
   return [{title: 'Hydrogen | Home'}];
@@ -151,23 +136,6 @@ async function loadCollectionGrid(
     );
 }
 
-type SanityDualCardRaw = {
-  image?: {
-    asset?: {
-      url?: string | null;
-      metadata?: {dimensions?: {width?: number | null; height?: number | null} | null} | null;
-    } | null;
-  } | null;
-  title?: string | null;
-  subtitle?: string | null;
-  buttonText?: string | null;
-  link?: Array<{
-    _type: string;
-    url?: string;
-    reference?: {_type: string; slug?: string};
-  }> | null;
-};
-
 type SanityReviewItemRaw = {
   _id?: string | null;
   author?: string | null;
@@ -226,16 +194,7 @@ async function loadShopTheLook(
 
   if (productIds.length === 0) return null;
 
-  const response = (await context.storefront.query(
-    HOMEPAGE_FEATURED_PRODUCTS_QUERY,
-    {variables: {productIds}},
-  )) as HomepageFeaturedProductsQuery;
-
-  const productsById = new Map(
-    (response.products ?? [])
-      .filter(isShopifyProductNode)
-      .map((product) => [product.id, product]),
-  );
+  const productsById = await hydrateProductsByGid(context, productIds);
 
   const looks = raw.looks
     .map((look) => ({
@@ -264,47 +223,12 @@ async function loadFeaturedProducts(
 
   if (productIds.length === 0) return [];
 
-  const response = (await context.storefront.query(
-    HOMEPAGE_FEATURED_PRODUCTS_QUERY,
-    {
-      variables: {
-        productIds,
-      },
-    },
-  )) as HomepageFeaturedProductsQuery;
-
-  const productsById = new Map(
-    (response.products ?? [])
-      .filter(isShopifyProductNode)
-      .map((product) => [product.id, product]),
-  );
+  const productsById = await hydrateProductsByGid(context, productIds);
 
   // Preserve Sanity ordering
   return selections
     .map((selection) => resolveFeaturedProductItem(selection, productsById))
     .filter((p): p is FeaturedProductItem => Boolean(p));
-}
-
-function resolveDualCardBanner(rawCards: SanityDualCardRaw[]): DualCardItem[] {
-  const result: DualCardItem[] = [];
-  for (const card of rawCards) {
-    if (!card.image?.asset?.url) continue;
-    const imageUrl = urlFor(card.image as Parameters<typeof urlFor>[0])
-      .width(1200)
-      .height(1500)
-      .auto('format')
-      .fit('crop')
-      .url();
-    if (!imageUrl) continue;
-    result.push({
-      image: {url: imageUrl, altText: card.title ?? undefined},
-      title: card.title ?? '',
-      subtitle: card.subtitle ?? null,
-      buttonText: card.buttonText ?? null,
-      url: resolveLinkUrl(card.link?.[0]),
-    });
-  }
-  return result;
 }
 
 function resolveReviews(
@@ -373,17 +297,6 @@ function resolveInstagramCards(raw: SanityInstagramCardsRaw): InstagramCardsData
     instagramUrl: raw.instagramUrl ?? null,
     cards,
   };
-}
-
-function resolveLinkUrl(link: {_type: string; url?: string; reference?: {_type: string; slug?: string}} | undefined): string {
-  if (!link) return '/';
-  if (link._type === 'linkExternal') return link.url ?? '/';
-  const ref = link.reference;
-  if (!ref?.slug) return '/';
-  if (ref._type === 'collection') return `/collections/${ref.slug}`;
-  if (ref._type === 'product') return `/products/${ref.slug}`;
-  if (ref._type === 'page') return `/pages/${ref.slug}`;
-  return '/';
 }
 
 export default function Homepage() {
@@ -524,31 +437,9 @@ type SanityCollectionCardImage = {
   } | null;
 };
 
-type SanityFeaturedProductSelection = {
-  productId?: string | null;
-  handle?: string | null;
-  title?: string | null;
-};
-
-type ShopifyProductNode = NonNullable<
-  HomepageFeaturedProductsQuery['products'][number]
->;
-
-function uniqueStrings(values: Array<string | null | undefined>) {
-  return Array.from(
-    new Set(values.filter((value): value is string => Boolean(value))),
-  );
-}
-
 function isShopifyCollectionNode(
   node: HomepageCollectionGridQuery['collections'][number],
 ): node is ShopifyCollectionNode {
-  return Boolean(node);
-}
-
-function isShopifyProductNode(
-  node: HomepageFeaturedProductsQuery['products'][number],
-): node is ShopifyProductNode {
   return Boolean(node);
 }
 
@@ -586,35 +477,6 @@ function resolveCollectionGridItem(
   };
 }
 
-function resolveFeaturedProductItem(
-  selection: SanityFeaturedProductSelection,
-  productsById: Map<string, ShopifyProductNode>,
-): FeaturedProductItem | null {
-  if (!selection.productId) return null;
-
-  const product = productsById.get(selection.productId);
-  if (!product) return null;
-
-  const title = product.title || selection.title;
-  const handle = product.handle || selection.handle;
-  if (!title || !handle) return null;
-
-  return {
-    id: product.id,
-    title,
-    handle,
-    image: product.featuredImage
-      ? {
-          url: product.featuredImage.url,
-          altText: product.featuredImage.altText,
-          width: product.featuredImage.width,
-          height: product.featuredImage.height,
-        }
-      : null,
-    price: product.priceRange.minVariantPrice,
-  };
-}
-
 const HOMEPAGE_COLLECTION_GRID_QUERY = `#graphql
   fragment HomepageCollectionGridCollection on Collection {
     __typename
@@ -631,39 +493,6 @@ const HOMEPAGE_COLLECTION_GRID_QUERY = `#graphql
     collections: nodes(ids: $collectionIds) {
       ... on Collection {
         ...HomepageCollectionGridCollection
-      }
-    }
-  }
-` as const;
-
-const HOMEPAGE_FEATURED_PRODUCTS_QUERY = `#graphql
-  fragment HomepageFeaturedProduct on Product {
-    id
-    title
-    handle
-    featuredImage {
-      id
-      url
-      altText
-      width
-      height
-    }
-    priceRange {
-      minVariantPrice {
-        amount
-        currencyCode
-      }
-    }
-  }
-
-  query HomepageFeaturedProducts(
-    $productIds: [ID!]!
-    $country: CountryCode
-    $language: LanguageCode
-  ) @inContext(country: $country, language: $language) {
-    products: nodes(ids: $productIds) {
-      ... on Product {
-        ...HomepageFeaturedProduct
       }
     }
   }

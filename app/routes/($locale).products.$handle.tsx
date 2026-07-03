@@ -1,5 +1,6 @@
-import {redirect, useLoaderData} from 'react-router';
-import type {Route} from './+types/products.$handle';
+import {Suspense} from 'react';
+import {Await, useLoaderData} from 'react-router';
+import type {Route} from './+types/($locale).products.$handle';
 import {
   getSelectedProductOptions,
   Analytics,
@@ -8,15 +9,32 @@ import {
   getAdjacentAndFirstAvailableVariants,
   useSelectedOptionInUrlParam,
 } from '@shopify/hydrogen';
+import {PortableText, type PortableTextBlock} from '@portabletext/react';
 import {ProductPrice} from '~/components/ProductPrice';
-import {ProductImage} from '~/components/ProductImage';
+import {ProductGallery} from '~/components/ProductGallery';
 import {ProductForm} from '~/components/ProductForm';
+import {Accordion} from '~/components/Accordion';
+import {RecommendedProducts} from '~/components/RecommendedProducts';
+import {TrustpilotStars} from '~/components/Reviews';
+import {portableTextComponents} from '~/components/PortableTextComponents';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {sanityLanguage} from '~/lib/i18n';
 
 export const meta: Route.MetaFunction = ({data}) => {
+  const title =
+    data?.sanityProduct?.seo?.title ??
+    data?.product.seo?.title ??
+    data?.product.title ??
+    '';
+  const description =
+    data?.sanityProduct?.seo?.description ??
+    data?.product.seo?.description ??
+    data?.product.description ??
+    '';
+
   return [
-    {title: `Hydrogen | ${data?.product.title ?? ''}`},
+    {title},
+    {name: 'description', content: description},
     {
       rel: 'canonical',
       href: `/products/${data?.product.handle}`,
@@ -25,14 +43,25 @@ export const meta: Route.MetaFunction = ({data}) => {
 };
 
 export async function loader(args: Route.LoaderArgs) {
-  // Start fetching non-critical data without blocking time to first byte
-  const deferredData = loadDeferredData(args);
-
   // Await the critical data required to render initial state of the page
   const criticalData = await loadCriticalData(args);
 
-  return {...deferredData, ...criticalData};
+  return {...criticalData};
 }
+
+type SanityProductRaw = {
+  body?: PortableTextBlock[] | null;
+  seo?: {title?: string | null; description?: string | null} | null;
+} | null;
+
+type SanityPdpSettingsRaw = {
+  productInfoPanels?: Array<{
+    _key: string;
+    title?: string | null;
+    body?: PortableTextBlock[] | null;
+  }> | null;
+  reviewScore?: number | null;
+} | null;
 
 /**
  * Load data necessary for rendering content above the fold. This is the critical data
@@ -46,14 +75,26 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     throw new Error('Expected product handle to be defined');
   }
 
-  const [{product}, sanityProduct] = await Promise.all([
+  const language = sanityLanguage(storefront.i18n.language);
+
+  const [{product}, sanityProduct, sanitySettings] = await Promise.all([
     storefront.query(PRODUCT_QUERY, {
       variables: {handle, selectedOptions: getSelectedProductOptions(request)},
     }),
-    // Add other queries here, so that they are loaded in parallel
-    sanity.fetch<{descriptionHtml: string | null; image: string | null; body: unknown[] | null} | null>
-      (SANITY_PRODUCT_QUERY, {handle, language: sanityLanguage(storefront.i18n.language)}, {tag: 'homepage', hydrogen: {debug: {displayName: 'query Homepage'}},
-      }),
+    sanity
+      .fetch<SanityProductRaw>(
+        SANITY_PRODUCT_QUERY,
+        {handle, language},
+        {hydrogen: {debug: {displayName: 'query SanityProduct'}}},
+      )
+      .catch(() => null),
+    sanity
+      .fetch<SanityPdpSettingsRaw>(
+        SANITY_PDP_SETTINGS_QUERY,
+        {language},
+        {hydrogen: {debug: {displayName: 'query SanityPdpSettings'}}},
+      )
+      .catch(() => null),
   ]);
 
   if (!product?.id) {
@@ -63,26 +104,27 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   // The API handle might be localized, so redirect to the localized handle
   redirectIfHandleIsLocalized(request, {handle, data: product});
 
+  // Aanbevelingen hebben het product-GID nodig; start de query zonder await
+  // zodat hij deferred blijft (render via <Suspense><Await>).
+  const recommended = storefront
+    .query(RECOMMENDED_PRODUCTS_QUERY, {
+      variables: {productId: product.id},
+    })
+    .then((result) => result.productRecommendations ?? [])
+    .catch(() => []);
+
   return {
     product,
     sanityProduct,
+    productInfoPanels: sanitySettings?.productInfoPanels ?? [],
+    reviewScore: sanitySettings?.reviewScore ?? null,
+    recommended,
   };
 }
 
-/**
- * Load data for rendering content below the fold. This data is deferred and will be
- * fetched after the initial page load. If it's unavailable, the page should still 200.
- * Make sure to not throw any errors here, as it will cause the page to 500.
- */
-function loadDeferredData({context, params}: Route.LoaderArgs) {
-  // Put any API calls that is not critical to be available on first page render
-  // For example: product reviews, product recommendations, social feeds.
-
-  return {};
-}
-
 export default function Product() {
-  const {product, sanityProduct} = useLoaderData<typeof loader>();
+  const {product, sanityProduct, productInfoPanels, reviewScore, recommended} =
+    useLoaderData<typeof loader>();
 
   // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
@@ -102,31 +144,74 @@ export default function Product() {
 
   const {title, descriptionHtml} = product;
 
+  const detailsContent = sanityProduct?.body?.length ? (
+    <PortableText
+      value={sanityProduct.body}
+      components={portableTextComponents}
+    />
+  ) : descriptionHtml ? (
+    <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
+  ) : null;
+
+  const accordionItems = [
+    ...(detailsContent
+      ? [{id: 'details', title: 'Productdetails', content: detailsContent}]
+      : []),
+    ...productInfoPanels
+      .filter((panel) => panel.title && panel.body?.length)
+      .map((panel) => ({
+        id: panel._key,
+        title: panel.title!,
+        content: (
+          <PortableText
+            value={panel.body!}
+            components={portableTextComponents}
+          />
+        ),
+      })),
+  ];
+
   return (
-    <div className="product">
-      <ProductImage image={selectedVariant?.image} />
-      <div className="product-main">
-        <h1>{title}</h1>
-        {sanityProduct?.image && <img src={sanityProduct.image} alt={product.title} />}
-        {sanityProduct?.descriptionHtml && <div dangerouslySetInnerHTML={{__html: sanityProduct.descriptionHtml}} />}
-        <ProductPrice
-          price={selectedVariant?.price}
-          compareAtPrice={selectedVariant?.compareAtPrice}
-        />
-        <br />
-        <ProductForm
-          productOptions={productOptions}
-          selectedVariant={selectedVariant}
-        />
-        <br />
-        <br />
-        <p>
-          <strong>Description</strong>
-        </p>
-        <br />
-        <div dangerouslySetInnerHTML={{__html: descriptionHtml}} />
-        <br />
+    <>
+      <div className="pdp">
+        <div className="pdp__gallery">
+          <ProductGallery
+            images={product.images.nodes}
+            selectedVariantImage={selectedVariant?.image}
+            productTitle={title}
+          />
+        </div>
+        <div className="pdp__info">
+          {product.vendor ? (
+            <p className="pdp__vendor">{product.vendor}</p>
+          ) : null}
+          {reviewScore !== null ? (
+            <div className="pdp__rating">
+              <TrustpilotStars rating={reviewScore} size="sm" />
+              <span className="pdp__rating-score">
+                {reviewScore.toFixed(1)}/5.0
+              </span>
+            </div>
+          ) : null}
+          <h1 className="pdp__title">{title}</h1>
+          <div className="pdp__price">
+            <ProductPrice
+              price={selectedVariant?.price}
+              compareAtPrice={selectedVariant?.compareAtPrice}
+            />
+          </div>
+          <ProductForm
+            productOptions={productOptions}
+            selectedVariant={selectedVariant}
+          />
+          <Accordion items={accordionItems} defaultOpenIndex={0} />
+        </div>
       </div>
+      <Suspense fallback={null}>
+        <Await resolve={recommended} errorElement={null}>
+          {(products) => <RecommendedProducts products={products} />}
+        </Await>
+      </Suspense>
       <Analytics.ProductView
         data={{
           products: [
@@ -142,7 +227,7 @@ export default function Product() {
           ],
         }}
       />
-    </div>
+    </>
   );
 }
 
@@ -193,6 +278,15 @@ const PRODUCT_FRAGMENT = `#graphql
     description
     encodedVariantExistence
     encodedVariantAvailability
+    images(first: 10) {
+      nodes {
+        id
+        url
+        altText
+        width
+        height
+      }
+    }
     options {
       name
       optionValues {
@@ -238,8 +332,67 @@ const PRODUCT_QUERY = `#graphql
   ${PRODUCT_FRAGMENT}
 ` as const;
 
-const SANITY_PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $handle][0]{
-    "descriptionHtml": store.descriptionHtml,
-    "image": store.previewImageUrl,
-    "body": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)
-  }`;
+const RECOMMENDED_PRODUCTS_QUERY = `#graphql
+  fragment RecommendedProduct on Product {
+    id
+    title
+    handle
+    featuredImage {
+      id
+      url
+      altText
+      width
+      height
+    }
+    priceRange {
+      minVariantPrice {
+        amount
+        currencyCode
+      }
+    }
+  }
+
+  query ProductRecommendations(
+    $productId: ID!
+    $country: CountryCode
+    $language: LanguageCode
+  ) @inContext(country: $country, language: $language) {
+    productRecommendations(productId: $productId, intent: RELATED) {
+      ...RecommendedProduct
+    }
+  }
+` as const;
+
+const PORTABLE_TEXT_MARKDEFS = `markDefs[]{
+  ...,
+  _type == "linkInternal" => {
+    "docType": reference->_type,
+    "slug": coalesce(reference->store.slug.current, reference->slug.current)
+  },
+  _type == "linkProduct" => {
+    "slug": productWithVariant.product->store.slug.current
+  }
+}`;
+
+const SANITY_PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $handle && !(_id in path("drafts.**"))][0]{
+  "body": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)[]{
+    ...,
+    ${PORTABLE_TEXT_MARKDEFS}
+  },
+  seo{
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value)
+  }
+}`;
+
+const SANITY_PDP_SETTINGS_QUERY = `*[_type == "settings"][0]{
+  "reviewScore": *[_type == "home"][0].reviews.score,
+  "productInfoPanels": productInfoPanels[]{
+    _key,
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "body": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)[]{
+      ...,
+      ${PORTABLE_TEXT_MARKDEFS}
+    }
+  }
+}`;

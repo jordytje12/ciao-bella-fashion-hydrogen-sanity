@@ -1,8 +1,12 @@
 import {useLoaderData, Link} from 'react-router';
-import type {Route} from './+types/collections._index';
+import type {Route} from './+types/($locale).collections._index';
 import {getPaginationVariables, Image} from '@shopify/hydrogen';
 import type {CollectionFragment} from 'storefrontapi.generated';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+
+export const meta: Route.MetaFunction = () => {
+  return [{title: 'Collecties'}];
+};
 
 export async function loader(args: Route.LoaderArgs) {
   // Start fetching non-critical data without blocking time to first byte
@@ -20,7 +24,7 @@ export async function loader(args: Route.LoaderArgs) {
  */
 async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const paginationVariables = getPaginationVariables(request, {
-    pageBy: 4,
+    pageBy: 12,
   });
 
   const [{collections}] = await Promise.all([
@@ -46,11 +50,13 @@ export default function Collections() {
   const {collections} = useLoaderData<typeof loader>();
 
   return (
-    <div className="collections">
-      <h1>Collections</h1>
+    <div className="collections-index">
+      <header className="collection-page__header">
+        <h1 className="collection-page__title">Collecties</h1>
+      </header>
       <PaginatedResourceSection<CollectionFragment>
         connection={collections}
-        resourcesClassName="collections-grid"
+        resourcesClassName="collections-index__grid"
       >
         {({node: collection, index}) => (
           <CollectionItem
@@ -73,7 +79,7 @@ function CollectionItem({
 }) {
   return (
     <Link
-      className="collection-item"
+      className="home-collection-card"
       key={collection.id}
       to={`/collections/${collection.handle}`}
       prefetch="intent"
@@ -81,13 +87,14 @@ function CollectionItem({
       {collection?.image && (
         <Image
           alt={collection.image.altText || collection.title}
-          aspectRatio="1/1"
+          aspectRatio="4/5"
+          className="home-collection-card__image"
           data={collection.image}
-          loading={index < 3 ? 'eager' : undefined}
-          sizes="(min-width: 45em) 400px, 100vw"
+          loading={index < 4 ? 'eager' : undefined}
+          sizes="(min-width: 64em) 25vw, 50vw"
         />
       )}
-      <h5>{collection.title}</h5>
+      <span className="home-collection-card__title">{collection.title}</span>
     </Link>
   );
 }

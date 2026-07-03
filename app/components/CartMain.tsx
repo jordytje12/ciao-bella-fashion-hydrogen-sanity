@@ -52,12 +52,12 @@ export function CartMain({layout, cart: originalCart}: CartMainProps) {
   return (
     <section
       className={className}
-      aria-label={layout === 'page' ? 'Cart page' : 'Cart drawer'}
+      aria-label={layout === 'page' ? 'Winkelwagen' : 'Winkelwagen drawer'}
     >
       <CartEmpty hidden={linesCount} layout={layout} />
       <div className="cart-details">
         <p id="cart-lines" className="sr-only">
-          Line items
+          Producten
         </p>
         <div>
           <ul aria-labelledby="cart-lines">
@@ -94,15 +94,15 @@ function CartEmpty({
 }) {
   const {close} = useAside();
   return (
-    <div hidden={hidden}>
-      <br />
-      <p>
-        Looks like you haven&rsquo;t added anything yet, let&rsquo;s get you
-        started!
-      </p>
-      <br />
-      <Link to="/collections" onClick={close} prefetch="viewport">
-        Continue shopping →
+    <div className="cart-empty" hidden={hidden}>
+      <p className="cart-empty__text">Je winkelwagen is nog leeg.</p>
+      <Link
+        className="cart-empty__link"
+        to="/collections"
+        onClick={close}
+        prefetch="viewport"
+      >
+        Verder winkelen
       </Link>
     </div>
   );

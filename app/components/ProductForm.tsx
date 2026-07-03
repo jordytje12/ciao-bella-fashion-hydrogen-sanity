@@ -1,3 +1,4 @@
+import {useState} from 'react';
 import {Link, useNavigate} from 'react-router';
 import {type MappedProductOptions} from '@shopify/hydrogen';
 import type {
@@ -5,6 +6,7 @@ import type {
   ProductOptionValueSwatch,
 } from '@shopify/hydrogen/storefront-api-types';
 import {AddToCartButton} from './AddToCartButton';
+import {QuantitySelector} from './QuantitySelector';
 import {useAside} from './Aside';
 import type {ProductFragment} from 'storefrontapi.generated';
 
@@ -17,16 +19,18 @@ export function ProductForm({
 }) {
   const navigate = useNavigate();
   const {open} = useAside();
+  const [quantity, setQuantity] = useState(1);
+
   return (
-    <div className="product-form">
+    <div className="pdp-form">
       {productOptions.map((option) => {
         // If there is only a single value in the option values, don't display the option
         if (option.optionValues.length === 1) return null;
 
         return (
-          <div className="product-options" key={option.name}>
-            <h5>{option.name}</h5>
-            <div className="product-options-grid">
+          <div className="pdp-options" key={option.name}>
+            <span className="pdp-options__label">{option.name}</span>
+            <div className="pdp-options__grid">
               {option.optionValues.map((value) => {
                 const {
                   name,
@@ -39,6 +43,17 @@ export function ProductForm({
                   swatch,
                 } = value;
 
+                const itemClassName = [
+                  'pdp-options__item',
+                  selected ? 'pdp-options__item--selected' : '',
+                  !available ? 'pdp-options__item--unavailable' : '',
+                  swatch?.color || swatch?.image
+                    ? 'pdp-options__item--swatch'
+                    : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+
                 if (isDifferentProduct) {
                   // SEO
                   // When the variant is a combined listing child product
@@ -46,18 +61,12 @@ export function ProductForm({
                   // as an anchor tag
                   return (
                     <Link
-                      className="product-options-item"
+                      className={itemClassName}
                       key={option.name + name}
                       prefetch="intent"
                       preventScrollReset
                       replace
                       to={`/products/${handle}?${variantUriQuery}`}
-                      style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
-                      }}
                     >
                       <ProductOptionSwatch swatch={swatch} name={name} />
                     </Link>
@@ -71,16 +80,8 @@ export function ProductForm({
                   return (
                     <button
                       type="button"
-                      className={`product-options-item${
-                        exists && !selected ? ' link' : ''
-                      }`}
+                      className={itemClassName}
                       key={option.name + name}
-                      style={{
-                        border: selected
-                          ? '1px solid black'
-                          : '1px solid transparent',
-                        opacity: available ? 1 : 0.3,
-                      }}
                       disabled={!exists}
                       onClick={() => {
                         if (!selected) {
@@ -97,29 +98,37 @@ export function ProductForm({
                 }
               })}
             </div>
-            <br />
           </div>
         );
       })}
-      <AddToCartButton
-        disabled={!selectedVariant || !selectedVariant.availableForSale}
-        onClick={() => {
-          open('cart');
-        }}
-        lines={
-          selectedVariant
-            ? [
-                {
-                  merchandiseId: selectedVariant.id,
-                  quantity: 1,
-                  selectedVariant,
-                },
-              ]
-            : []
-        }
-      >
-        {selectedVariant?.availableForSale ? 'Add to cart' : 'Sold out'}
-      </AddToCartButton>
+      <div className="pdp-buy">
+        <QuantitySelector
+          value={quantity}
+          onDecrease={() => setQuantity((current) => Math.max(1, current - 1))}
+          onIncrease={() => setQuantity((current) => current + 1)}
+          disabled={!selectedVariant?.availableForSale}
+        />
+        <AddToCartButton
+          className="pdp-buy__add"
+          disabled={!selectedVariant || !selectedVariant.availableForSale}
+          onClick={() => {
+            open('cart');
+          }}
+          lines={
+            selectedVariant
+              ? [
+                  {
+                    merchandiseId: selectedVariant.id,
+                    quantity,
+                    selectedVariant,
+                  },
+                ]
+              : []
+          }
+        >
+          {selectedVariant?.availableForSale ? 'In winkelwagen' : 'Uitverkocht'}
+        </AddToCartButton>
+      </div>
     </div>
   );
 }
@@ -139,7 +148,7 @@ function ProductOptionSwatch({
   return (
     <div
       aria-label={name}
-      className="product-option-label-swatch"
+      className="pdp-options__swatch"
       style={{
         backgroundColor: color || 'transparent',
       }}

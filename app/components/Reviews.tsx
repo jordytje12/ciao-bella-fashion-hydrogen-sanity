@@ -39,8 +39,9 @@ function formatDate(dateStr: string): string {
 /**
  * Trustpilot-stijl sterren: groene vierkante tegels met witte ster.
  * Ondersteunt decimale scores (bv. 4.6) via een lineaire gradient.
+ * Wordt ook op de productpagina gebruikt (boven de titel).
  */
-function TrustpilotStars({
+export function TrustpilotStars({
   rating,
   size = 'md',
 }: {
