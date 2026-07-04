@@ -5,6 +5,19 @@ import {PortableText, type PortableTextBlock} from '@portabletext/react';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductCard} from '~/components/ProductCard';
+import {Aside, useAside} from '~/components/Aside';
+import {
+  AppliedFilterChips,
+  CollectionFilters,
+  SortSelect,
+  type CollectionFilter,
+} from '~/components/CollectionFilters';
+import {
+  getCollectionSortVariables,
+  isFilteredOrSorted,
+  parseFiltersFromSearchParams,
+} from '~/lib/collectionFilters';
+import {getSeoMeta, breadcrumbJsonLd, canonicalUrl, rootSeo} from '~/lib/seo';
 import {
   CollectionModules,
   type ResolvedCollectionModule,
@@ -24,7 +37,10 @@ import {
   type SanityLinkRaw,
 } from '~/lib/sanityModules';
 
-export const meta: Route.MetaFunction = ({data}) => {
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  const url = canonicalUrl(origin, location.pathname);
+
   const title =
     data?.sanitySeo?.title ??
     data?.collection.seo?.title ??
@@ -36,7 +52,18 @@ export const meta: Route.MetaFunction = ({data}) => {
     data?.collection.description ??
     '';
 
-  return [{title}, {name: 'description', content: description}];
+  return getSeoMeta(seo, {
+    title,
+    description,
+    url,
+    robots: isFilteredOrSorted(location.search) ? {noIndex: true} : undefined,
+    jsonLd: data?.collection
+      ? breadcrumbJsonLd([
+          {name: 'Home', url: origin || undefined},
+          {name: data.collection.title, url},
+        ])
+      : undefined,
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {
@@ -61,9 +88,13 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     throw redirect('/collections');
   }
 
+  const {searchParams} = new URL(request.url);
+  const filters = parseFiltersFromSearchParams(searchParams);
+  const {sortKey, reverse} = getCollectionSortVariables(searchParams);
+
   const [{collection}, sanityCollection] = await Promise.all([
     storefront.query(COLLECTION_QUERY, {
-      variables: {handle, ...paginationVariables},
+      variables: {handle, filters, sortKey, reverse, ...paginationVariables},
     }),
     context.sanity
       .fetch(SANITY_COLLECTION_QUERY, {
@@ -203,6 +234,10 @@ async function resolveModules(
 
 export default function Collection() {
   const {collection, sanityIntro, modules} = useLoaderData<typeof loader>();
+  const {open} = useAside();
+
+  const filters = (collection.products.filters ?? []) as CollectionFilter[];
+  const hasProducts = collection.products.nodes.length > 0;
 
   return (
     <div className="collection-page">
@@ -219,21 +254,59 @@ export default function Collection() {
           <p className="collection-page__intro">{collection.description}</p>
         ) : null}
       </header>
-      <div className="collection-page__products">
-        <PaginatedResourceSection<ProductItemFragment>
-          connection={collection.products}
-          resourcesClassName="collection-products-grid"
-          loadOnScroll
-        >
-          {({node: product, index}) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              loading={index < 8 ? 'eager' : undefined}
-            />
+
+      {filters.length > 0 && (
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 pb-4">
+          <div className="flex items-center justify-between gap-4">
+            <button
+              type="button"
+              onClick={() => open('filters')}
+              className="rounded border border-black/20 px-4 py-1.5 font-body text-sm text-black transition-colors hover:border-black lg:hidden"
+            >
+              Filters
+            </button>
+            <div className="hidden lg:block" />
+            <SortSelect />
+          </div>
+          <AppliedFilterChips filters={filters} />
+        </div>
+      )}
+
+      <div className="mx-auto max-w-7xl px-6 lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-10">
+        {filters.length > 0 && (
+          <aside className="hidden lg:block">
+            <CollectionFilters filters={filters} />
+          </aside>
+        )}
+        <div>
+          {hasProducts ? (
+            <PaginatedResourceSection<ProductItemFragment>
+              connection={collection.products}
+              resourcesClassName="collection-products-grid"
+              loadOnScroll
+            >
+              {({node: product, index}) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  loading={index < 8 ? 'eager' : undefined}
+                />
+              )}
+            </PaginatedResourceSection>
+          ) : (
+            <p className="py-12 text-center font-body text-sm text-black/70">
+              Geen producten gevonden met deze filters.
+            </p>
           )}
-        </PaginatedResourceSection>
+        </div>
       </div>
+
+      {filters.length > 0 && (
+        <Aside type="filters" heading="Filters">
+          <CollectionFilters filters={filters} />
+        </Aside>
+      )}
+
       <CollectionModules modules={modules} />
       <Analytics.CollectionView
         data={{
@@ -285,6 +358,9 @@ const COLLECTION_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $filters: [ProductFilter!]
+    $sortKey: ProductCollectionSortKeys!
+    $reverse: Boolean!
   ) @inContext(country: $country, language: $language) {
     collection(handle: $handle) {
       id
@@ -299,8 +375,22 @@ const COLLECTION_QUERY = `#graphql
         first: $first,
         last: $last,
         before: $startCursor,
-        after: $endCursor
+        after: $endCursor,
+        filters: $filters,
+        sortKey: $sortKey,
+        reverse: $reverse
       ) {
+        filters {
+          id
+          label
+          type
+          values {
+            id
+            label
+            count
+            input
+          }
+        }
         nodes {
           ...ProductItem
         }

@@ -1,6 +1,7 @@
 import {useLoaderData} from 'react-router';
-import type {Route} from './+types/search';
+import type {Route} from './+types/($locale).search';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
+import {getSeoMeta, rootSeo} from '~/lib/seo';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
 import {
@@ -13,8 +14,9 @@ import type {
   PredictiveSearchQuery,
 } from 'storefrontapi.generated';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Search`}];
+export const meta: Route.MetaFunction = ({matches}) => {
+  const {seo} = rootSeo(matches);
+  return getSeoMeta(seo, {title: 'Zoeken', robots: {noIndex: true}});
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {

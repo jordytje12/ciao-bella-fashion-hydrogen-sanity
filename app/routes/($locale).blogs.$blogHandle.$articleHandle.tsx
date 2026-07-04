@@ -1,10 +1,29 @@
 import {useLoaderData} from 'react-router';
-import type {Route} from './+types/blogs.$blogHandle.$articleHandle';
+import type {Route} from './+types/($locale).blogs.$blogHandle.$articleHandle';
 import {Image} from '@shopify/hydrogen';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {getSeoMeta, blogPostingJsonLd, canonicalUrl, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `Hydrogen | ${data?.article.title ?? ''} article`}];
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  const url = canonicalUrl(origin, location.pathname);
+  const article = data?.article;
+
+  return getSeoMeta(seo, {
+    title: article?.seo?.title ?? article?.title ?? '',
+    description: article?.seo?.description ?? undefined,
+    url,
+    media: article?.image?.url,
+    jsonLd: article
+      ? blogPostingJsonLd({
+          title: article.title,
+          url,
+          image: article.image?.url,
+          datePublished: article.publishedAt,
+          author: article.author?.name,
+        })
+      : undefined,
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {

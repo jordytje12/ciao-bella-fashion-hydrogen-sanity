@@ -3,9 +3,14 @@ import type {Route} from './+types/($locale).collections._index';
 import {getPaginationVariables, Image} from '@shopify/hydrogen';
 import type {CollectionFragment} from 'storefrontapi.generated';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: 'Collecties'}];
+export const meta: Route.MetaFunction = ({matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  return getSeoMeta(seo, {
+    title: 'Collecties',
+    url: canonicalUrl(origin, location.pathname),
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {

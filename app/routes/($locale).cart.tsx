@@ -1,11 +1,13 @@
 import {useLoaderData, data, type HeadersFunction} from 'react-router';
-import type {Route} from './+types/cart';
+import type {Route} from './+types/($locale).cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
+import {getSeoMeta, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Cart`}];
+export const meta: Route.MetaFunction = ({matches}) => {
+  const {seo} = rootSeo(matches);
+  return getSeoMeta(seo, {title: 'Winkelwagen', robots: {noIndex: true}});
 };
 
 export const headers: HeadersFunction = ({actionHeaders}) => actionHeaders;

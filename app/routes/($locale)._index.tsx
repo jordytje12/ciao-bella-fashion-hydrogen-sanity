@@ -35,9 +35,36 @@ import {
   uniqueStrings,
   type SanityFeaturedProductSelection,
 } from '~/lib/sanityModules';
+import {getSeoMeta, canonicalUrl, organizationJsonLd, rootSeo, webSiteJsonLd} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: 'Hydrogen | Home'}];
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  const url = canonicalUrl(origin, location.pathname);
+
+  const homeSeo = (data?.sanityHome as HomeSeoRaw | null)?.seo;
+  const rootData = matches.find((match) => match?.id === 'root')?.data as
+    | {footer?: {socialLinks?: Array<{url: string}> | null} | null}
+    | undefined;
+  const sameAs =
+    rootData?.footer?.socialLinks?.map((social) => social.url) ?? [];
+
+  return getSeoMeta(seo, {
+    title: homeSeo?.title ?? seo.title,
+    // Homepage toont de titel zonder site-suffix
+    titleTemplate: '%s',
+    description: homeSeo?.description ?? seo.description,
+    url,
+    media: homeSeo?.imageUrl ?? seo.media,
+    jsonLd: [organizationJsonLd({url, sameAs}), webSiteJsonLd({origin})],
+  });
+};
+
+type HomeSeoRaw = {
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    imageUrl?: string | null;
+  } | null;
 };
 
 export async function loader(args: Route.LoaderArgs) {
@@ -644,6 +671,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
   },
   seo{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
-    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value)
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value),
+    "imageUrl": image.asset->url
   }
 }`;

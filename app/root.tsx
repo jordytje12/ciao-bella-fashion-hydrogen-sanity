@@ -1,4 +1,10 @@
-import {Analytics, getShopAnalytics, useNonce} from '@shopify/hydrogen';
+import {
+  Analytics,
+  getShopAnalytics,
+  useNonce,
+  type SeoConfig,
+} from '@shopify/hydrogen';
+import {SITE_NAME} from '~/lib/seo';
 import {
   Outlet,
   useRouteError,
@@ -19,6 +25,7 @@ import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
+import {KlaviyoOnsite} from './components/KlaviyoOnsite';
 import {Sanity} from 'hydrogen-sanity';
 import {usePreviewMode} from 'hydrogen-sanity/preview';
 import {VisualEditing} from 'hydrogen-sanity/visual-editing';
@@ -98,9 +105,9 @@ export async function loader(args: Route.LoaderArgs) {
       publicStorefrontId: env.PUBLIC_STOREFRONT_ID,
     }),
     consent: {
-      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN,
+      checkoutDomain: env.PUBLIC_CHECKOUT_DOMAIN ?? env.PUBLIC_STORE_DOMAIN,
       storefrontAccessToken: env.PUBLIC_STOREFRONT_API_TOKEN,
-      withPrivacyBanner: false,
+      withPrivacyBanner: true,
       // localize the privacy banner
       country: args.context.storefront.i18n.country,
       language: args.context.storefront.i18n.language,
@@ -112,7 +119,7 @@ export async function loader(args: Route.LoaderArgs) {
  * Load data necessary for rendering content above the fold. This is the critical data
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
-async function loadCriticalData({context}: Route.LoaderArgs) {
+async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const {storefront, sanity} = context;
   const language = sanityLanguage(storefront.i18n.language);
 
@@ -123,10 +130,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
         headerMenuHandle: 'main-menu', // Adjust to your header menu handle
       },
     }),
-    sanity.fetch<{usps: Array<{text: string; iconUrl: string | null}>} | null>(
-      TOPBAR_QUERY,
-      {language},
-    ),
+    sanity.fetch<SanitySettingsRaw | null>(TOPBAR_QUERY, {language}),
     sanity.fetch<FooterData | null>(SANITY_FOOTER_QUERY, {language}).catch(
       () => null,
     ),
@@ -135,8 +139,31 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const topbarUsps =
     sanitySettings?.usps?.filter((item: {text: string; iconUrl: string | null}) => Boolean(item.text)) ?? [];
 
-  return {header, topbarUsps, footer: footerData};
+  const siteTitle = sanitySettings?.seo?.title ?? SITE_NAME;
+  const seo: SeoConfig = {
+    title: siteTitle,
+    titleTemplate: `%s | ${siteTitle}`,
+    description: sanitySettings?.seo?.description ?? undefined,
+    media: sanitySettings?.seo?.imageUrl ?? undefined,
+  };
+
+  return {
+    header,
+    topbarUsps,
+    footer: footerData,
+    seo,
+    origin: new URL(request.url).origin,
+  };
 }
+
+type SanitySettingsRaw = {
+  usps: Array<{text: string; iconUrl: string | null}> | null;
+  seo?: {
+    title?: string | null;
+    description?: string | null;
+    imageUrl?: string | null;
+  } | null;
+};
 
 /**
  * Load data for rendering content below the fold. This data is deferred and will be
@@ -198,6 +225,7 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
+      <KlaviyoOnsite companyId={data.footer?.klaviyoCompanyId} />
       <PageLayout {...data}>
         <Outlet />
       </PageLayout>
@@ -234,6 +262,11 @@ const TOPBAR_QUERY = `*[_type == "settings"][0]{
   "usps": topbarUsps[]{
     "text": coalesce(text[language == $language][0].value, text[language == "nl"][0].value),
     "iconUrl": icon.asset->url
+  },
+  "seo": seo{
+    "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
+    "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value),
+    "imageUrl": image.asset->url
   }
 }`;
 

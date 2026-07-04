@@ -19,8 +19,12 @@ import {TrustpilotStars} from '~/components/Reviews';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {sanityLanguage} from '~/lib/i18n';
+import {getSeoMeta, breadcrumbJsonLd, canonicalUrl, productJsonLd, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = ({data}) => {
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  const url = canonicalUrl(origin, location.pathname);
+
   const title =
     data?.sanityProduct?.seo?.title ??
     data?.product.seo?.title ??
@@ -32,14 +36,33 @@ export const meta: Route.MetaFunction = ({data}) => {
     data?.product.description ??
     '';
 
-  return [
-    {title},
-    {name: 'description', content: description},
-    {
-      rel: 'canonical',
-      href: `/products/${data?.product.handle}`,
-    },
-  ];
+  const selectedVariant = data?.product.selectedOrFirstAvailableVariant;
+  const image = selectedVariant?.image?.url ?? data?.product.images.nodes[0]?.url;
+
+  return getSeoMeta(seo, {
+    title,
+    description,
+    url,
+    media: image,
+    jsonLd: data?.product
+      ? [
+          productJsonLd({
+            product: {
+              title: data.product.title,
+              description,
+              vendor: data.product.vendor,
+              featuredImage: image ? {url: image} : null,
+            },
+            selectedVariant,
+            url,
+          }),
+          breadcrumbJsonLd([
+            {name: 'Home', url: origin || undefined},
+            {name: data.product.title, url},
+          ]),
+        ]
+      : undefined,
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {

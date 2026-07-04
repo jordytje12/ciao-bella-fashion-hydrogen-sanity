@@ -1,5 +1,5 @@
-import {useEffect} from 'react';
 import {Link} from 'react-router';
+import {useAnalytics} from '@shopify/hydrogen';
 import {useLocalePrefix} from '~/lib/i18n';
 import {resolveLinkUrl} from '~/lib/links';
 
@@ -185,20 +185,7 @@ export function FooterUspBar({cards}: {cards: UspCard[]}) {
 
 export function Footer({footer}: {footer: FooterData | null}) {
   const localePrefix = useLocalePrefix();
-
-  // Klaviyo onsite script — laad eenmalig wanneer companyId beschikbaar is
-  useEffect(() => {
-    const companyId = footer?.klaviyoCompanyId;
-    if (!companyId) return;
-    const existingScript = document.querySelector(
-      `script[src*="klaviyo.js?company_id=${companyId}"]`,
-    );
-    if (existingScript) return;
-    const script = document.createElement('script');
-    script.src = `https://static.klaviyo.com/onsite/js/klaviyo.js?company_id=${companyId}`;
-    script.async = true;
-    document.head.appendChild(script);
-  }, [footer?.klaviyoCompanyId]);
+  const {privacyBanner} = useAnalytics();
 
   const uspCards = footer?.uspCards ?? [];
   const socialLinks = footer?.socialLinks ?? [];
@@ -327,6 +314,13 @@ export function Footer({footer}: {footer: FooterData | null}) {
         <div className="mx-auto max-w-7xl px-6 py-4">
           <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
             <PaymentIcons />
+            <button
+              type="button"
+              onClick={() => privacyBanner?.showPreferences()}
+              className="font-body text-xs text-cream/60 underline transition-colors hover:text-cream"
+            >
+              Cookievoorkeuren
+            </button>
             <p className="font-body text-xs text-cream/60">
               © 2026 Ciaobellafashion | All Rights Reserved
             </p>

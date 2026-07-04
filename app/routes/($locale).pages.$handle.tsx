@@ -1,9 +1,15 @@
 import {useLoaderData} from 'react-router';
-import type {Route} from './+types/pages.$handle';
+import type {Route} from './+types/($locale).pages.$handle';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `Hydrogen | ${data?.page.title ?? ''}`}];
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  return getSeoMeta(seo, {
+    title: data?.page.seo?.title ?? data?.page.title ?? '',
+    description: data?.page.seo?.description ?? undefined,
+    url: canonicalUrl(origin, location.pathname),
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {

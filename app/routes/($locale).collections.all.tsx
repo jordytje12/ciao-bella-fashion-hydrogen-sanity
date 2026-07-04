@@ -1,12 +1,23 @@
-import type {Route} from './+types/collections.all';
+import type {Route} from './+types/($locale).collections.all';
 import {useLoaderData} from 'react-router';
 import {getPaginationVariables, Image, Money} from '@shopify/hydrogen';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {ProductItem} from '~/components/ProductItem';
+import {SortSelect} from '~/components/CollectionFilters';
+import {
+  getCatalogSortVariables,
+  isFilteredOrSorted,
+} from '~/lib/collectionFilters';
 import type {CollectionItemFragment} from 'storefrontapi.generated';
+import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: `Hydrogen | Products`}];
+export const meta: Route.MetaFunction = ({matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  return getSeoMeta(seo, {
+    title: 'Producten',
+    url: canonicalUrl(origin, location.pathname),
+    robots: isFilteredOrSorted(location.search) ? {noIndex: true} : undefined,
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {
@@ -29,9 +40,12 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
     pageBy: 8,
   });
 
+  const {searchParams} = new URL(request.url);
+  const {sortKey, reverse} = getCatalogSortVariables(searchParams);
+
   const [{products}] = await Promise.all([
     storefront.query(CATALOG_QUERY, {
-      variables: {...paginationVariables},
+      variables: {sortKey, reverse, ...paginationVariables},
     }),
     // Add other queries here, so that they are loaded in parallel
   ]);
@@ -52,7 +66,10 @@ export default function Collection() {
 
   return (
     <div className="collection">
-      <h1>Products</h1>
+      <h1>Producten</h1>
+      <div className="flex justify-end pb-4">
+        <SortSelect />
+      </div>
       <PaginatedResourceSection<CollectionItemFragment>
         connection={products}
         resourcesClassName="products-grid"
@@ -106,8 +123,17 @@ const CATALOG_QUERY = `#graphql
     $last: Int
     $startCursor: String
     $endCursor: String
+    $sortKey: ProductSortKeys!
+    $reverse: Boolean!
   ) @inContext(country: $country, language: $language) {
-    products(first: $first, last: $last, before: $startCursor, after: $endCursor) {
+    products(
+      first: $first,
+      last: $last,
+      before: $startCursor,
+      after: $endCursor,
+      sortKey: $sortKey,
+      reverse: $reverse
+    ) {
       nodes {
         ...CollectionItem
       }

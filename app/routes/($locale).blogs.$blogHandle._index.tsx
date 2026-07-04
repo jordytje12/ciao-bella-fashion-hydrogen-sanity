@@ -1,12 +1,18 @@
 import {Link, useLoaderData} from 'react-router';
-import type {Route} from './+types/blogs.$blogHandle._index';
+import type {Route} from './+types/($locale).blogs.$blogHandle._index';
 import {Image, getPaginationVariables} from '@shopify/hydrogen';
 import type {ArticleItemFragment} from 'storefrontapi.generated';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
+import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
-export const meta: Route.MetaFunction = ({data}) => {
-  return [{title: `Hydrogen | ${data?.blog.title ?? ''} blog`}];
+export const meta: Route.MetaFunction = ({data, matches, location}) => {
+  const {origin, seo} = rootSeo(matches);
+  return getSeoMeta(seo, {
+    title: data?.blog.seo?.title ?? data?.blog.title ?? '',
+    description: data?.blog.seo?.description ?? undefined,
+    url: canonicalUrl(origin, location.pathname),
+  });
 };
 
 export async function loader(args: Route.LoaderArgs) {
