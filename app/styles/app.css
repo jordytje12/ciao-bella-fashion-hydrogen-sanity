@@ -1487,6 +1487,19 @@ aside .cart-details > div:first-of-type {
   width: fit-content;
 }
 
+/* Sentinel-link voor infinite scroll: geen knop-styling, alleen laad-indicator */
+a.pagination-load-on-scroll,
+.collection-page__products > div > a.pagination-load-on-scroll {
+  background: none;
+  color: var(--color-ink, #222);
+  display: block;
+  min-height: 1px;
+  padding: 0.75rem 2rem;
+  text-align: center;
+  text-decoration: none;
+  text-transform: none;
+}
+
 .collection-callout {
   background: var(--color-cream);
   margin: 50px 0;

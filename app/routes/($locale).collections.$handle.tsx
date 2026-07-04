@@ -223,6 +223,7 @@ export default function Collection() {
         <PaginatedResourceSection<ProductItemFragment>
           connection={collection.products}
           resourcesClassName="collection-products-grid"
+          loadOnScroll
         >
           {({node: product, index}) => (
             <ProductCard
