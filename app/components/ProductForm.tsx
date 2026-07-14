@@ -1,6 +1,6 @@
 import {useEffect, useId, useRef, useState} from 'react';
 import {useInView} from 'react-intersection-observer';
-import {Link, useFetcher, useNavigate} from 'react-router';
+import {Link, useFetcher, useNavigate, useRouteLoaderData} from 'react-router';
 import {type MappedProductOptions} from '@shopify/hydrogen';
 import type {
   Maybe,
@@ -10,6 +10,8 @@ import {AddToCartButton} from './AddToCartButton';
 import {QuantitySelector} from './QuantitySelector';
 import {useAside} from './Aside';
 import type {ProductFragment} from 'storefrontapi.generated';
+import type {RootLoader} from '~/root';
+import {getUiTranslations} from '~/lib/translations';
 
 const PDP_ADD_TO_CART_FETCHER_KEY = 'pdp-add-to-cart';
 
@@ -22,6 +24,8 @@ export function ProductForm({
 }) {
   const navigate = useNavigate();
   const {open} = useAside();
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const labels = getUiTranslations(rootData?.consent.language);
   const [quantity, setQuantity] = useState(1);
   const [isSizeSheetOpen, setIsSizeSheetOpen] = useState(false);
   const [selectedSizeVariantId, setSelectedSizeVariantId] = useState<
@@ -52,8 +56,8 @@ export function ProductForm({
       ]
     : [];
   const addToCartLabel = selectedVariant?.availableForSale
-    ? 'In winkelwagen'
-    : 'Uitverkocht';
+    ? labels.addToCart
+    : labels.soldOut;
   const sizeOption = productOptions.find((option) =>
     ['maat', 'size'].includes(option.name.toLocaleLowerCase('nl')),
   );
@@ -79,10 +83,10 @@ export function ProductForm({
   );
   const sizeSheetButtonLabel =
     sizeOption && !activeSize
-      ? 'Kies een maat'
+      ? labels.chooseSize
       : sizeSheetVariant?.availableForSale
-        ? 'In winkelwagen'
-        : 'Uitverkocht';
+        ? labels.addToCart
+        : labels.soldOut;
 
   const openSizeSheet = () => {
     restoreSheetFocusRef.current = true;
@@ -283,7 +287,7 @@ export function ProductForm({
             aria-haspopup="dialog"
             onClick={openSizeSheet}
           >
-            In winkelwagen
+            {labels.addToCart}
           </button>
         </div>
       ) : null}
@@ -292,7 +296,7 @@ export function ProductForm({
           <button
             type="button"
             className="pdp-size-sheet__backdrop"
-            aria-label="Maatkeuze sluiten"
+            aria-label={labels.closeSizeSelection}
             tabIndex={-1}
             onClick={() => closeSizeSheet()}
           />
@@ -304,12 +308,12 @@ export function ProductForm({
             aria-labelledby={sizeSheetTitleId}
           >
             <div className="pdp-size-sheet__header">
-              <h2 id={sizeSheetTitleId}>Kies je maat</h2>
+              <h2 id={sizeSheetTitleId}>{labels.chooseYourSize}</h2>
               <button
                 ref={sizeSheetCloseRef}
                 type="button"
                 className="pdp-size-sheet__close"
-                aria-label="Sluiten"
+                aria-label={labels.close}
                 onClick={() => closeSizeSheet()}
               >
                 &times;
