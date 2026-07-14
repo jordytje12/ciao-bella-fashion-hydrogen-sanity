@@ -18,7 +18,7 @@ import {
 } from 'react-router';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
-import {HEADER_QUERY} from '~/lib/fragments';
+import {FALLBACK_HEADER_MENU, loadHeaderMenu} from '~/lib/headerMenu';
 import {sanityLanguage} from '~/lib/i18n';
 import type {FooterData} from '~/components/Footer';
 import resetStyles from '~/styles/reset.css?url';
@@ -123,13 +123,8 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   const {storefront, sanity} = context;
   const language = sanityLanguage(storefront.i18n.language);
 
-  const [header, sanitySettings, footerData] = await Promise.all([
-    storefront.query(HEADER_QUERY, {
-      cache: storefront.CacheLong(),
-      variables: {
-        headerMenuHandle: 'main-menu', // Adjust to your header menu handle
-      },
-    }),
+  const [headerMenu, sanitySettings, footerData] = await Promise.all([
+    loadHeaderMenu(context, language),
     sanity.fetch<SanitySettingsRaw | null>(TOPBAR_QUERY, {language}),
     sanity.fetch<FooterData | null>(SANITY_FOOTER_QUERY, {language}).catch(
       () => null,
@@ -148,7 +143,7 @@ async function loadCriticalData({context, request}: Route.LoaderArgs) {
   };
 
   return {
-    header,
+    headerMenu: headerMenu ?? FALLBACK_HEADER_MENU,
     topbarUsps,
     footer: footerData,
     seo,

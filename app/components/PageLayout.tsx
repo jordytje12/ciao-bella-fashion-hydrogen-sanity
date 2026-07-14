@@ -1,13 +1,12 @@
 import {Await, Link} from 'react-router';
 import {Suspense, useId} from 'react';
-import type {
-  CartApiQueryFragment,
-  HeaderQuery,
-} from 'storefrontapi.generated';
+import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {Aside} from '~/components/Aside';
 import {Footer, type FooterData} from '~/components/Footer';
-import {Header, HeaderMenu} from '~/components/Header';
+import {Header} from '~/components/Header';
+import {MobileMenu} from '~/components/MobileMenu';
 import {MarketSelector} from '~/components/LocaleSelector';
+import type {HeaderMenuData} from '~/lib/headerMenu';
 import {CartMain} from '~/components/CartMain';
 import {
   SEARCH_ENDPOINT,
@@ -19,9 +18,8 @@ import {Topbar, type TopbarUsp} from '~/components/Topbar';
 interface PageLayoutProps {
   cart: Promise<CartApiQueryFragment | null>;
   footer?: FooterData | null;
-  header: HeaderQuery;
+  headerMenu: HeaderMenuData;
   isLoggedIn: Promise<boolean>;
-  publicStoreDomain: string;
   topbarUsps?: TopbarUsp[];
   children?: React.ReactNode;
 }
@@ -30,25 +28,17 @@ export function PageLayout({
   cart,
   children = null,
   footer,
-  header,
+  headerMenu,
   isLoggedIn,
-  publicStoreDomain,
   topbarUsps,
 }: PageLayoutProps) {
   return (
     <Aside.Provider>
       <CartAside cart={cart} />
       <SearchAside />
-      <MobileMenuAside header={header} publicStoreDomain={publicStoreDomain} />
+      <MobileMenuAside menu={headerMenu} />
       <Topbar items={topbarUsps} />
-      {header && (
-        <Header
-          header={header}
-          cart={cart}
-          isLoggedIn={isLoggedIn}
-          publicStoreDomain={publicStoreDomain}
-        />
-      )}
+      <Header menu={headerMenu} cart={cart} isLoggedIn={isLoggedIn} />
       <main>{children}</main>
       <Footer footer={footer ?? null} />
     </Aside.Provider>
@@ -151,27 +141,13 @@ function SearchAside() {
   );
 }
 
-function MobileMenuAside({
-  header,
-  publicStoreDomain,
-}: {
-  header: PageLayoutProps['header'];
-  publicStoreDomain: PageLayoutProps['publicStoreDomain'];
-}) {
+function MobileMenuAside({menu}: {menu: HeaderMenuData}) {
   return (
-    header.menu &&
-    header.shop.primaryDomain?.url && (
-      <Aside type="mobile" heading="Menu">
-        <HeaderMenu
-          menu={header.menu}
-          viewport="mobile"
-          primaryDomainUrl={header.shop.primaryDomain.url}
-          publicStoreDomain={publicStoreDomain}
-        />
-        <div className="mobile-market">
-          <MarketSelector />
-        </div>
-      </Aside>
-    )
+    <Aside type="mobile" heading="Menu">
+      <MobileMenu menu={menu} />
+      <div className="mobile-market">
+        <MarketSelector />
+      </div>
+    </Aside>
   );
 }

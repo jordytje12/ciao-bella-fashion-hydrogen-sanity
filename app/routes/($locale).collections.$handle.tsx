@@ -256,7 +256,7 @@ export default function Collection() {
       </header>
 
       {filters.length > 0 && (
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-6 pb-4">
+        <div className="flex flex-col gap-3 px-5 pb-4 md:px-12.5">
           <div className="flex items-center justify-between gap-4">
             <button
               type="button"
@@ -272,13 +272,19 @@ export default function Collection() {
         </div>
       )}
 
-      <div className="mx-auto max-w-7xl px-6 lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-10">
+      <div
+        className={`px-5 md:px-12.5 ${
+          filters.length > 0
+            ? 'lg:grid lg:grid-cols-[240px_1fr] lg:items-start lg:gap-10'
+            : ''
+        }`}
+      >
         {filters.length > 0 && (
           <aside className="hidden lg:block">
             <CollectionFilters filters={filters} />
           </aside>
         )}
-        <div>
+        <div className="collection-page__products">
           {hasProducts ? (
             <PaginatedResourceSection<ProductItemFragment>
               connection={collection.products}
