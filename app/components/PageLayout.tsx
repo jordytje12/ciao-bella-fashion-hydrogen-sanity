@@ -12,6 +12,7 @@ import {
   SEARCH_ENDPOINT,
   SearchFormPredictive,
 } from '~/components/SearchFormPredictive';
+import {SocialLinks, type SocialLink} from '~/components/SocialLinks';
 import {SearchResultsPredictive} from '~/components/SearchResultsPredictive';
 import {Topbar, type TopbarUsp} from '~/components/Topbar';
 
@@ -36,7 +37,7 @@ export function PageLayout({
     <Aside.Provider>
       <CartAside cart={cart} />
       <SearchAside />
-      <MobileMenuAside menu={headerMenu} />
+      <MobileMenuAside menu={headerMenu} socialLinks={footer?.socialLinks} />
       <Topbar items={topbarUsps} />
       <Header menu={headerMenu} cart={cart} isLoggedIn={isLoggedIn} />
       <main>{children}</main>
@@ -141,12 +142,19 @@ function SearchAside() {
   );
 }
 
-function MobileMenuAside({menu}: {menu: HeaderMenuData}) {
+function MobileMenuAside({
+  menu,
+  socialLinks,
+}: {
+  menu: HeaderMenuData;
+  socialLinks?: SocialLink[] | null;
+}) {
   return (
     <Aside type="mobile" heading="Menu">
       <MobileMenu menu={menu} />
       <div className="mobile-market">
         <MarketSelector />
+        <SocialLinks links={socialLinks} />
       </div>
     </Aside>
   );

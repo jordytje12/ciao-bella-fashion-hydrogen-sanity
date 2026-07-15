@@ -274,6 +274,7 @@ const SANITY_FOOTER_QUERY = `*[_type == "footer"][0]{
   "brandTitle": coalesce(brandTitle[language == $language][0].value, brandTitle[language == "nl"][0].value),
   "brandText": coalesce(brandText[language == $language][0].value, brandText[language == "nl"][0].value),
   "socialLinks": socialLinks[]{
+    _key,
     platform,
     url
   },

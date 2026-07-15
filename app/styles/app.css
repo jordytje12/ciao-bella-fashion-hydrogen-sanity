@@ -444,9 +444,13 @@ button.reset:hover:not(:has(> *)) {
 }
 
 .mobile-market {
+  align-items: center;
   margin-top: 2rem;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(0, 0, 0, 0.1);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
 }
 
 /* Mobiel menu (accordeon in de aside-drawer) */
