@@ -25,10 +25,37 @@ export default async function handleRequest(
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
     frameAncestors: isPreviewEnabled ? [studioHostname] : [],
-    defaultSrc: ['https://cdn.sanity.io', 'https://lh3.googleusercontent.com'],
+    defaultSrc: [
+      'https://cdn.sanity.io',
+      'https://lh3.googleusercontent.com',
+      'https://*.klaviyo.com',
+    ],
     connectSrc: [
       `https://${projectId}.api.sanity.io`,
       `wss://${projectId}.api.sanity.io`,
+      'https://*.klaviyo.com',
+    ],
+    styleSrc: [
+      'https://*.klaviyo.com',
+      'https://fonts.googleapis.com',
+    ],
+    // fontSrc/imgSrc hebben geen Hydrogen-defaults en vallen na het zetten
+    // niet meer terug op default-src — alle bronnen expliciet opnemen.
+    fontSrc: [
+      "'self'",
+      'data:',
+      'https://fonts.gstatic.com',
+      'https://*.klaviyo.com',
+    ],
+    imgSrc: [
+      "'self'",
+      'data:',
+      'blob:',
+      'https://cdn.shopify.com',
+      'https://cdn.sanity.io',
+      'https://lh3.googleusercontent.com',
+      'https://*.klaviyo.com',
+      'https://d3k81ch9hvuctc.cloudfront.net',
     ],
   });
 

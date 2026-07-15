@@ -220,10 +220,10 @@ export default function App() {
       shop={data.shop}
       consent={data.consent}
     >
-      <KlaviyoOnsite companyId={data.footer?.klaviyoCompanyId} />
       <PageLayout {...data}>
         <Outlet />
       </PageLayout>
+      <KlaviyoOnsite companyId={data.footer?.klaviyoCompanyId} />
     </Analytics.Provider>
   );
 }
