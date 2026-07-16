@@ -2316,8 +2316,46 @@ a.collection-callout__text {
   text-decoration: underline;
 }
 
+/* PDP FAQ */
+.pdp-faq {
+  margin: 0 auto 50px;
+  max-width: 720px;
+  padding: 0 20px;
+}
+
+@media (min-width: 48em) {
+  .pdp-faq {
+    margin-bottom: 60px;
+    padding: 0 50px;
+  }
+}
+
+.pdp-faq__heading {
+  color: #1C1A18;
+  font-family: "Cormorant Garamond";
+  font-size: 28px;
+  font-weight: 400;
+  margin: 0 0 0.5rem;
+}
+
+@media (min-width: 64em) {
+  .pdp-faq__heading {
+    font-size: 40px;
+  }
+}
+
+.pdp-faq .pdp-accordion {
+  margin-top: 0;
+}
+
+.pdp-faq .pdp-accordion__summary {
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 /*
-* --------------------------------------------------
+  * --------------------------------------------------
 * routes/blog._index.tsx
 * --------------------------------------------------
 */

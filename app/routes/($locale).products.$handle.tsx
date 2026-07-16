@@ -19,7 +19,15 @@ import {TrustpilotStars} from '~/components/Reviews';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {sanityLanguage} from '~/lib/i18n';
-import {getSeoMeta, breadcrumbJsonLd, canonicalUrl, productJsonLd, rootSeo} from '~/lib/seo';
+import {portableTextToPlainText} from '~/lib/portableText';
+import {
+  getSeoMeta,
+  breadcrumbJsonLd,
+  canonicalUrl,
+  faqPageJsonLd,
+  productJsonLd,
+  rootSeo,
+} from '~/lib/seo';
 
 export const meta: Route.MetaFunction = ({data, matches, location}) => {
   const {origin, seo} = rootSeo(matches);
@@ -38,6 +46,15 @@ export const meta: Route.MetaFunction = ({data, matches, location}) => {
 
   const selectedVariant = data?.product.selectedOrFirstAvailableVariant;
   const image = selectedVariant?.image?.url ?? data?.product.images.nodes[0]?.url;
+
+  const faqLd = faqPageJsonLd(
+    (data?.productFaqs ?? [])
+      .filter((faq) => faq.question && faq.answer?.length)
+      .map((faq) => ({
+        question: faq.question!,
+        answer: portableTextToPlainText(faq.answer),
+      })),
+  );
 
   return getSeoMeta(seo, {
     title,
@@ -60,6 +77,7 @@ export const meta: Route.MetaFunction = ({data, matches, location}) => {
             {name: 'Home', url: origin || undefined},
             {name: data.product.title, url},
           ]),
+          ...(faqLd ? [faqLd] : []),
         ]
       : undefined,
   });
@@ -82,6 +100,11 @@ type SanityPdpSettingsRaw = {
     _key: string;
     title?: string | null;
     body?: PortableTextBlock[] | null;
+  }> | null;
+  productFaqs?: Array<{
+    _key: string;
+    question?: string | null;
+    answer?: PortableTextBlock[] | null;
   }> | null;
   reviewScore?: number | null;
 } | null;
@@ -140,14 +163,21 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     product,
     sanityProduct,
     productInfoPanels: sanitySettings?.productInfoPanels ?? [],
+    productFaqs: sanitySettings?.productFaqs ?? [],
     reviewScore: sanitySettings?.reviewScore ?? null,
     recommended,
   };
 }
 
 export default function Product() {
-  const {product, sanityProduct, productInfoPanels, reviewScore, recommended} =
-    useLoaderData<typeof loader>();
+  const {
+    product,
+    sanityProduct,
+    productInfoPanels,
+    productFaqs,
+    reviewScore,
+    recommended,
+  } = useLoaderData<typeof loader>();
 
   // Optimistically selects a variant with given available variant information
   const selectedVariant = useOptimisticVariant(
@@ -194,6 +224,19 @@ export default function Product() {
       })),
   ];
 
+  const faqItems = productFaqs
+    .filter((faq) => faq.question && faq.answer?.length)
+    .map((faq) => ({
+      id: faq._key,
+      title: faq.question!,
+      content: (
+        <PortableText
+          value={faq.answer!}
+          components={portableTextComponents}
+        />
+      ),
+    }));
+
   return (
     <>
       <div className="pdp">
@@ -230,6 +273,14 @@ export default function Product() {
           <Accordion items={accordionItems} defaultOpenIndex={0} />
         </div>
       </div>
+      {faqItems.length ? (
+        <section className="pdp-faq" aria-labelledby="pdp-faq-heading">
+          <h2 className="pdp-faq__heading" id="pdp-faq-heading">
+            Veelgestelde vragen
+          </h2>
+          <Accordion items={faqItems} />
+        </section>
+      ) : null}
       <Suspense fallback={null}>
         <Await resolve={recommended} errorElement={null}>
           {(products) => <RecommendedProducts products={products} />}
@@ -414,6 +465,14 @@ const SANITY_PDP_SETTINGS_QUERY = `*[_type == "settings"][0]{
     _key,
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
     "body": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)[]{
+      ...,
+      ${PORTABLE_TEXT_MARKDEFS}
+    }
+  },
+  "productFaqs": productFaqs[]{
+    _key,
+    "question": coalesce(question[language == $language][0].value, question[language == "nl"][0].value),
+    "answer": coalesce(answer[language == $language][0].value, answer[language == "nl"][0].value)[]{
       ...,
       ${PORTABLE_TEXT_MARKDEFS}
     }

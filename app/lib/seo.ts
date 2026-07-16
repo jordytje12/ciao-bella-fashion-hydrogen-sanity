@@ -161,3 +161,23 @@ export function blogPostingJsonLd({
     author: author ? {'@type': 'Person', name: author} : undefined,
   } as JsonLd;
 }
+
+export function faqPageJsonLd(
+  faqs: Array<{question: string; answer: string}>,
+): JsonLd | null {
+  const entities = faqs.filter((faq) => faq.question && faq.answer);
+  if (!entities.length) return null;
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: entities.map((faq) => ({
+      '@type': 'Question',
+      name: faq.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: faq.answer,
+      },
+    })),
+  } as JsonLd;
+}
