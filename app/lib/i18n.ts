@@ -15,7 +15,16 @@ export function sanityLanguage(language: I18nLocale['language']): string {
 
 export function useLocalePrefix(): string {
   const {locale} = useParams();
-  return locale ? `/${locale}` : '';
+  if (!locale) return '';
+
+  // Optional `($locale)` can capture unknown first path segments (e.g. `/404`).
+  // Only treat known market prefixes as a locale path.
+  const key = locale.toLowerCase();
+  if (key !== 'default' && key in countries) {
+    return `/${key}`;
+  }
+
+  return '';
 }
 
 export interface I18nLocale extends I18nBase {

@@ -748,6 +748,129 @@ button.reset:hover:not(:has(> *)) {
   width: fit-content;
 }
 
+.not-found {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(70vh, 40rem);
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.not-found__logo {
+  display: block;
+  margin-bottom: 2.5rem;
+  width: min(12rem, 50vw);
+}
+
+.not-found__logo-img {
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.not-found__code {
+  color: #1c1a18;
+  font-family: var(--font-heading);
+  font-size: clamp(4.5rem, 14vw, 8rem);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 0.9;
+  margin: 0 0 1rem;
+}
+
+.not-found__title {
+  color: #1c1a18;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+}
+
+.not-found__body {
+  color: #1c1a18;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 2rem;
+  max-width: 28rem;
+  opacity: 0.8;
+}
+
+.not-found__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  justify-content: center;
+}
+
+.not-found__cta {
+  font-family: var(--font-body);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 2rem;
+  text-decoration: underline;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+.not-found__cta--primary {
+  background-color: var(--color-terracotta, #c97b5a);
+  color: #fff;
+}
+
+.not-found__cta--secondary {
+  color: #1c1a18;
+}
+
+.route-error {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: min(70vh, 40rem);
+  padding: 50px 20px;
+  text-align: center;
+}
+
+.route-error__title {
+  color: #1c1a18;
+  font-family: var(--font-heading);
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 500;
+  margin: 0 0 0.75rem;
+}
+
+.route-error__body {
+  color: #1c1a18;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.5;
+  margin: 0 0 2rem;
+  max-width: 28rem;
+  opacity: 0.8;
+}
+
+.route-error__cta {
+  background-color: var(--color-terracotta, #c97b5a);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 14px;
+  letter-spacing: 0.05em;
+  padding: 0.75rem 2rem;
+  text-decoration: underline;
+  text-transform: uppercase;
+  width: fit-content;
+}
+
+@media (min-width: 768px) {
+  .not-found,
+  .route-error {
+    padding: 100px 50px;
+  }
+}
+
 .cart-summary-page {
   position: relative;
 }

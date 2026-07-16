@@ -6,6 +6,7 @@ import {
 } from '@shopify/hydrogen';
 import {SITE_NAME} from '~/lib/seo';
 import {
+  Link,
   Outlet,
   useRouteError,
   isRouteErrorResponse,
@@ -19,13 +20,15 @@ import {
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import {FALLBACK_HEADER_MENU, loadHeaderMenu} from '~/lib/headerMenu';
-import {sanityLanguage} from '~/lib/i18n';
+import {sanityLanguage, useLocalePrefix} from '~/lib/i18n';
 import type {FooterData} from '~/components/Footer';
 import resetStyles from '~/styles/reset.css?url';
 import appStyles from '~/styles/app.css?url';
 import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
+import {NotFound} from './components/NotFound';
 import {KlaviyoOnsite} from './components/KlaviyoOnsite';
+import {getUiTranslations} from './lib/translations';
 import {Sanity} from 'hydrogen-sanity';
 import {usePreviewMode} from 'hydrogen-sanity/preview';
 import {VisualEditing} from 'hydrogen-sanity/visual-editing';
@@ -230,26 +233,44 @@ export default function App() {
 
 export function ErrorBoundary() {
   const error = useRouteError();
-  let errorMessage = 'Unknown error';
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const localePrefix = useLocalePrefix();
+  const t = getUiTranslations(rootData?.consent.language);
   let errorStatus = 500;
 
   if (isRouteErrorResponse(error)) {
-    errorMessage = error?.data?.message ?? error.data;
     errorStatus = error.status;
-  } else if (error instanceof Error) {
-    errorMessage = error.message;
   }
 
+  if (errorStatus === 404) {
+    const notFound = <NotFound standalone={!rootData} />;
+    if (!rootData) return notFound;
+
+    return (
+      <PageLayout
+        cart={rootData.cart}
+        footer={rootData.footer}
+        headerMenu={rootData.headerMenu}
+        isLoggedIn={rootData.isLoggedIn}
+        topbarUsps={rootData.topbarUsps}
+      >
+        {notFound}
+      </PageLayout>
+    );
+  }
+
+  const homeTo = localePrefix ? `${localePrefix}/` : '/';
+
   return (
-    <div className="route-error">
-      <h1>Oops</h1>
-      <h2>{errorStatus}</h2>
-      {errorMessage && (
-        <fieldset>
-          <pre>{errorMessage}</pre>
-        </fieldset>
-      )}
-    </div>
+    <section className="route-error" aria-labelledby="route-error-title">
+      <h1 id="route-error-title" className="route-error__title">
+        {t.errorTitle}
+      </h1>
+      <p className="route-error__body">{t.errorBody}</p>
+      <Link className="route-error__cta" to={homeTo}>
+        {t.notFoundHome}
+      </Link>
+    </section>
   );
 }
 
