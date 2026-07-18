@@ -13,6 +13,7 @@ import {PortableText, type PortableTextBlock} from '@portabletext/react';
 import {ProductPrice} from '~/components/ProductPrice';
 import {ProductGallery} from '~/components/ProductGallery';
 import {ProductForm} from '~/components/ProductForm';
+import {StockLevelBar} from '~/components/StockLevelBar';
 import {Accordion} from '~/components/Accordion';
 import {RecommendedProducts} from '~/components/RecommendedProducts';
 import {TrustpilotStars} from '~/components/Reviews';
@@ -266,6 +267,10 @@ export default function Product() {
               compareAtPrice={selectedVariant?.compareAtPrice}
             />
           </div>
+          <StockLevelBar
+            availableForSale={selectedVariant?.availableForSale}
+            quantityAvailable={selectedVariant?.quantityAvailable}
+          />
           <ProductForm
             productOptions={productOptions}
             selectedVariant={selectedVariant}
@@ -308,6 +313,7 @@ export default function Product() {
 const PRODUCT_VARIANT_FRAGMENT = `#graphql
   fragment ProductVariant on ProductVariant {
     availableForSale
+    quantityAvailable
     compareAtPrice {
       amount
       currencyCode

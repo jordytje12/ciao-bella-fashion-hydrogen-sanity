@@ -1872,7 +1872,82 @@ a.collection-callout__text {
   font-family: var(--font-heading);
   font-size: 18px;
   font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.pdp-stock {
   margin-bottom: 1.5rem;
+}
+
+.pdp-stock__meta {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.pdp-stock__dot {
+  animation: pdp-stock-pulse 1.4s ease-in-out infinite;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+  height: 0.5rem;
+  width: 0.5rem;
+}
+
+.pdp-stock__label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  line-height: 1.2;
+}
+
+.pdp-stock__track {
+  background: color-mix(in srgb, var(--color-ink, #222) 8%, transparent);
+  border-radius: 999px;
+  height: 4px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.pdp-stock__fill {
+  border-radius: inherit;
+  height: 100%;
+  transition: width 0.35s ease;
+}
+
+.pdp-stock--low {
+  --pdp-stock-color: #c44536;
+}
+
+.pdp-stock--medium {
+  --pdp-stock-color: #d4893a;
+}
+
+.pdp-stock--high {
+  --pdp-stock-color: #3d8b5f;
+}
+
+.pdp-stock__dot,
+.pdp-stock__fill {
+  background: var(--pdp-stock-color);
+}
+
+.pdp-stock__label {
+  color: var(--pdp-stock-color);
+}
+
+@keyframes pdp-stock-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--pdp-stock-color) 45%, transparent);
+    opacity: 1;
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--pdp-stock-color) 0%, transparent);
+    opacity: 0.65;
+  }
 }
 
 .product-price-on-sale {
