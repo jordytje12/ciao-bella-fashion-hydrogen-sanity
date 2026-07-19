@@ -2,6 +2,7 @@ import type {CurrencyCode} from '@shopify/hydrogen/storefront-api-types';
 import type {FeaturedProductItem} from '~/components/FeaturedProducts';
 import type {DualCardItem} from '~/components/DualCardBanner';
 import {urlFor} from '~/lib/sanityImage';
+import {resolveLinkUrl} from '~/lib/links';
 
 export type SanityLinkRaw = {
   _type: string;
@@ -63,16 +64,7 @@ export function uniqueStrings(values: Array<string | null | undefined>) {
   );
 }
 
-export function resolveLinkUrl(link: SanityLinkRaw | undefined): string {
-  if (!link) return '/';
-  if (link._type === 'linkExternal') return link.url ?? '/';
-  const ref = link.reference;
-  if (!ref?.slug) return '/';
-  if (ref._type === 'collection') return `/collections/${ref.slug}`;
-  if (ref._type === 'product') return `/products/${ref.slug}`;
-  if (ref._type === 'page') return `/pages/${ref.slug}`;
-  return '/';
-}
+export {resolveLinkUrl};
 
 export function resolveFeaturedProductItem(
   selection: SanityFeaturedProductSelection,

@@ -1,5 +1,6 @@
 import {Link} from 'react-router';
 import type {PortableTextComponents} from '@portabletext/react';
+import {isAbsoluteExternalUrl, isRelativePath} from '~/lib/links';
 
 type InternalLinkMark = {
   _type: 'linkInternal';
@@ -49,11 +50,21 @@ export const portableTextComponents: PortableTextComponents = {
     linkExternal: ({value, children}) => {
       const mark = value as ExternalLinkMark;
       if (!mark?.url) return <>{children}</>;
+      const href = mark.url.trim();
+      if (isRelativePath(href)) {
+        const to =
+          href.length > 1 && href.endsWith('/') ? href.slice(0, -1) : href;
+        return <Link to={to}>{children}</Link>;
+      }
       return (
         <a
-          href={mark.url}
+          href={href}
           rel="noopener noreferrer"
-          target={mark.newWindow ? '_blank' : undefined}
+          target={
+            isAbsoluteExternalUrl(href) && mark.newWindow
+              ? '_blank'
+              : undefined
+          }
         >
           {children}
         </a>

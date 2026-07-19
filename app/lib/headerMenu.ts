@@ -1,6 +1,6 @@
 import type {Storefront} from '@shopify/hydrogen';
 import type {CurrencyCode} from '@shopify/hydrogen/storefront-api-types';
-import {resolveLinkUrl} from '~/lib/links';
+import {resolveLinkUrl, isAbsoluteExternalUrl, isRelativePath} from '~/lib/links';
 import {uniqueStrings} from '~/lib/sanityModules';
 
 export type MenuProductCard = {
@@ -266,21 +266,27 @@ export async function loadHeaderMenu(
       });
     } else if (link._type === 'linkExternal') {
       if (!link.url) continue;
+      const to = resolveLinkUrl({_type: 'linkExternal', url: link.url});
       let label = link.label;
       if (!label) {
-        try {
-          label = new URL(link.url).hostname.replace(/^www\./, '');
-        } catch {
-          continue;
+        if (isRelativePath(to)) {
+          label = to;
+        } else {
+          try {
+            label = new URL(to).hostname.replace(/^www\./, '');
+          } catch {
+            continue;
+          }
         }
       }
+      const absoluteExternal = isAbsoluteExternalUrl(to);
       items.push({
         kind: 'link',
         key: link._key,
         label,
-        to: link.url,
-        external: true,
-        newWindow: link.newWindow ?? true,
+        to,
+        external: absoluteExternal,
+        newWindow: absoluteExternal ? (link.newWindow ?? true) : false,
       });
     }
   }

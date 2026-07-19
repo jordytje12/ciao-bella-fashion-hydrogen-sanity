@@ -1,7 +1,7 @@
 import {Link} from 'react-router';
 import {useAnalytics} from '@shopify/hydrogen';
 import {useLocalePrefix} from '~/lib/i18n';
-import {resolveLinkUrl} from '~/lib/links';
+import {resolveLinkUrl, isAbsoluteExternalUrl} from '~/lib/links';
 import {SocialLinks, type SocialLink} from '~/components/SocialLinks';
 import {MarketSelector} from '~/components/LocaleSelector';
 
@@ -184,10 +184,11 @@ export function Footer({footer}: {footer: FooterData | null}) {
                       const resolved = item.link
                         ? resolveLinkUrl(item.link)
                         : null;
-                      const isExternal =
-                        item.link?._type === 'linkExternal';
+                      const isAbsoluteExternal =
+                        item.link?._type === 'linkExternal' &&
+                        isAbsoluteExternalUrl(resolved);
                       const url = resolved
-                        ? isExternal
+                        ? isAbsoluteExternal
                           ? resolved
                           : `${localePrefix}${resolved}`
                         : null;
@@ -195,7 +196,7 @@ export function Footer({footer}: {footer: FooterData | null}) {
                       return (
                         <li key={linkIdx}>
                           {url ? (
-                            isExternal ? (
+                            isAbsoluteExternal ? (
                               <a
                                 href={url}
                                 target="_blank"
