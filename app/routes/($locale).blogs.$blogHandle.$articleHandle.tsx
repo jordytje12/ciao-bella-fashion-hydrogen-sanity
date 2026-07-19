@@ -1,6 +1,7 @@
 import {useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).blogs.$blogHandle.$articleHandle';
 import {Image} from '@shopify/hydrogen';
+import {ContentPage} from '~/components/ContentPage';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {getSeoMeta, blogPostingJsonLd, canonicalUrl, rootSeo} from '~/lib/seo';
 
@@ -88,28 +89,32 @@ export default function Article() {
   const {article} = useLoaderData<typeof loader>();
   const {title, image, contentHtml, author} = article;
 
-  const publishedDate = new Intl.DateTimeFormat('en-US', {
+  const publishedDate = new Intl.DateTimeFormat('nl-NL', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   }).format(new Date(article.publishedAt));
 
   return (
-    <div className="article">
-      <h1>
-        {title}
-        <div>
-          <time dateTime={article.publishedAt}>{publishedDate}</time> &middot;{' '}
-          <address>{author?.name}</address>
-        </div>
-      </h1>
-
-      {image && <Image data={image} sizes="90vw" loading="eager" />}
-      <div
-        dangerouslySetInnerHTML={{__html: contentHtml}}
-        className="article"
-      />
-    </div>
+    <ContentPage
+      title={title}
+      html={contentHtml}
+      className="article"
+      meta={
+        <>
+          <time dateTime={article.publishedAt}>{publishedDate}</time>
+          {author?.name ? (
+            <>
+              {' '}
+              &middot; <address>{author.name}</address>
+            </>
+          ) : null}
+        </>
+      }
+      media={
+        image ? <Image data={image} sizes="90vw" loading="eager" /> : null
+      }
+    />
   );
 }
 

@@ -1,5 +1,6 @@
 import {useLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).pages.$handle';
+import {ContentPage} from '~/components/ContentPage';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
@@ -63,14 +64,7 @@ function loadDeferredData({context}: Route.LoaderArgs) {
 export default function Page() {
   const {page} = useLoaderData<typeof loader>();
 
-  return (
-    <div className="page">
-      <header>
-        <h1>{page.title}</h1>
-      </header>
-      <main dangerouslySetInnerHTML={{__html: page.body}} />
-    </div>
-  );
+  return <ContentPage title={page.title} html={page.body} />;
 }
 
 const PAGE_QUERY = `#graphql
