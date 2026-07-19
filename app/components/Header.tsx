@@ -8,7 +8,6 @@ import {
 import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import {useAside} from '~/components/Aside';
 import {HeaderNav} from '~/components/HeaderNav';
-import {MarketSelector} from '~/components/LocaleSelector';
 import {useLocalePrefix} from '~/lib/i18n';
 import type {HeaderMenuData} from '~/lib/headerMenu';
 
@@ -177,9 +176,6 @@ function HeaderCtas({
       </NavLink>
       <SearchToggle />
       <CartToggle cart={cart} />
-      <span className="header-market">
-        <MarketSelector />
-      </span>
     </nav>
   );
 }

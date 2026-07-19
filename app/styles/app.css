@@ -435,14 +435,6 @@ button.reset:hover:not(:has(> *)) {
   width: 100%;
 }
 
-.header-market {
-  display: none;
-
-  @media (min-width: 64em) {
-    display: inline-flex;
-  }
-}
-
 .mobile-market {
   align-items: center;
   margin-top: 2rem;
@@ -603,6 +595,21 @@ button.reset:hover:not(:has(> *)) {
 .footer-menu a {
   color: var(--color-light);
   min-width: fit-content;
+}
+
+.footer-market {
+  display: none;
+}
+
+@media (min-width: 64em) {
+  .footer-market {
+    display: inline-flex;
+  }
+}
+
+.footer-market details > div {
+  bottom: 100%;
+  margin-bottom: 8px;
 }
 
 /*
@@ -2389,44 +2396,6 @@ a.collection-callout__text {
 
 .pdp-accordion__body a {
   text-decoration: underline;
-}
-
-/* PDP FAQ */
-.pdp-faq {
-  margin: 0 auto 50px;
-  max-width: 720px;
-  padding: 0 20px;
-}
-
-@media (min-width: 48em) {
-  .pdp-faq {
-    margin-bottom: 60px;
-    padding: 0 50px;
-  }
-}
-
-.pdp-faq__heading {
-  color: #1C1A18;
-  font-family: "Cormorant Garamond";
-  font-size: 28px;
-  font-weight: 400;
-  margin: 0 0 0.5rem;
-}
-
-@media (min-width: 64em) {
-  .pdp-faq__heading {
-    font-size: 40px;
-  }
-}
-
-.pdp-faq .pdp-accordion {
-  margin-top: 0;
-}
-
-.pdp-faq .pdp-accordion__summary {
-  font-size: 14px;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 /*

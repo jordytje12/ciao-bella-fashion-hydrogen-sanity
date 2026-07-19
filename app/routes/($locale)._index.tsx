@@ -20,7 +20,7 @@ import {
   type ShopTheLookData,
 } from '~/components/ShopTheLook';
 import {DualCardBanner} from '~/components/DualCardBanner';
-import {Reviews, type ReviewsData} from '~/components/Reviews';
+import {Reviews} from '~/components/Reviews';
 import {
   InstagramCards,
   type InstagramCardsData,
@@ -35,6 +35,12 @@ import {
   uniqueStrings,
   type SanityFeaturedProductSelection,
 } from '~/lib/sanityModules';
+import {
+  resolveReviews,
+  SANITY_FEATURED_REVIEWS_PROJECTION,
+  SANITY_REVIEWS_PROJECTION,
+  type SanityReviewItemRaw,
+} from '~/lib/reviews';
 import {getSeoMeta, canonicalUrl, organizationJsonLd, rootSeo, webSiteJsonLd} from '~/lib/seo';
 
 export const meta: Route.MetaFunction = ({data, matches, location}) => {
@@ -163,25 +169,6 @@ async function loadCollectionGrid(
     );
 }
 
-type SanityReviewItemRaw = {
-  _id?: string | null;
-  author?: string | null;
-  rating?: number | null;
-  date?: string | null;
-  reviewTitle?: string | null;
-  text?: string | null;
-};
-
-type SanityReviewsConfigRaw = {
-  heading?: string | null;
-  subtitle?: string | null;
-  selected?: SanityReviewItemRaw[] | null;
-  score?: number | null;
-  caption?: string | null;
-  trustpilotLabel?: string | null;
-  trustpilotUrl?: string | null;
-} | null;
-
 type SanityInstagramCardRaw = {
   image?: {
     asset?: {
@@ -256,44 +243,6 @@ async function loadFeaturedProducts(
   return selections
     .map((selection) => resolveFeaturedProductItem(selection, productsById))
     .filter((p): p is FeaturedProductItem => Boolean(p));
-}
-
-function resolveReviews(
-  config: SanityReviewsConfigRaw,
-  featured: SanityReviewItemRaw[],
-): ReviewsData | null {
-  // Use hand-picked selection if any; otherwise fall back to featured reviews
-  const rawItems =
-    config?.selected?.length ? config.selected : featured;
-
-  const items = rawItems
-    .filter(
-      (item): item is SanityReviewItemRaw & {text: string; rating: number} =>
-        Boolean(item.text) && typeof item.rating === 'number',
-    )
-    .map((item) => ({
-      id: item._id ?? Math.random().toString(36).slice(2),
-      author: item.author ?? '',
-      rating: item.rating,
-      date: item.date ?? null,
-      reviewTitle: item.reviewTitle ?? null,
-      text: item.text,
-    }));
-
-  const score = typeof config?.score === 'number' ? config.score : null;
-  const caption = (config?.caption as string) ?? null;
-  const label = typeof config?.trustpilotLabel === 'string' ? config.trustpilotLabel : null;
-  const url = typeof config?.trustpilotUrl === 'string' ? config.trustpilotUrl : null;
-  const trustBar = score !== null || caption ? {score, caption, label, url} : null;
-
-  if (items.length === 0 && !trustBar) return null;
-
-  return {
-    heading: (config?.heading as string) ?? '',
-    subtitle: (config?.subtitle as string) ?? null,
-    items,
-    trustBar,
-  };
 }
 
 function resolveInstagramCards(raw: SanityInstagramCardsRaw): InstagramCardsData | null {
@@ -634,22 +583,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     imageDesktop{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
     imageMobile{ asset->{_id, url, metadata{dimensions}}, hotspot, crop }
   },
-  reviews{
-    "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
-    "subtitle": coalesce(subtitle[language == $language][0].value, subtitle[language == "nl"][0].value),
-    "selected": selected[]->{
-      _id,
-      author,
-      rating,
-      date,
-      "reviewTitle": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
-      "text": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)
-    },
-    "score": score,
-    "caption": coalesce(caption[language == $language][0].value, caption[language == "nl"][0].value),
-    "trustpilotLabel": trustpilotLabel,
-    "trustpilotUrl": trustpilotUrl
-  },
+  ${SANITY_REVIEWS_PROJECTION},
   instagramCards{
     "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
     instagramHandle,
@@ -661,14 +595,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
       "title": product->store.title
     }
   },
-  "featuredReviews": *[_type == "review" && featured == true] | order(date desc) [0...9] {
-    _id,
-    author,
-    rating,
-    date,
-    "reviewTitle": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
-    "text": coalesce(body[language == $language][0].value, body[language == "nl"][0].value)
-  },
+  ${SANITY_FEATURED_REVIEWS_PROJECTION},
   seo{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
     "description": coalesce(description[language == $language][0].value, description[language == "nl"][0].value),

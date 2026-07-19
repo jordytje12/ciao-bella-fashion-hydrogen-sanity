@@ -16,11 +16,18 @@ import {ProductForm} from '~/components/ProductForm';
 import {StockLevelBar} from '~/components/StockLevelBar';
 import {Accordion} from '~/components/Accordion';
 import {RecommendedProducts} from '~/components/RecommendedProducts';
-import {TrustpilotStars} from '~/components/Reviews';
+import {Reviews, TrustpilotStars} from '~/components/Reviews';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {sanityLanguage} from '~/lib/i18n';
 import {portableTextToPlainText} from '~/lib/portableText';
+import {
+  resolveReviews,
+  SANITY_FEATURED_REVIEWS_PROJECTION,
+  SANITY_REVIEWS_PROJECTION,
+  type SanityReviewItemRaw,
+  type SanityReviewsConfigRaw,
+} from '~/lib/reviews';
 import {
   getSeoMeta,
   breadcrumbJsonLd,
@@ -108,6 +115,10 @@ type SanityPdpSettingsRaw = {
     answer?: PortableTextBlock[] | null;
   }> | null;
   reviewScore?: number | null;
+  homeReviews?: {
+    reviews?: SanityReviewsConfigRaw;
+    featuredReviews?: SanityReviewItemRaw[] | null;
+  } | null;
 } | null;
 
 /**
@@ -160,12 +171,19 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     .then((result) => result.productRecommendations ?? [])
     .catch(() => []);
 
+  const reviews = resolveReviews(
+    sanitySettings?.homeReviews?.reviews ?? null,
+    (sanitySettings?.homeReviews?.featuredReviews as SanityReviewItemRaw[]) ??
+      [],
+  );
+
   return {
     product,
     sanityProduct,
     productInfoPanels: sanitySettings?.productInfoPanels ?? [],
     productFaqs: sanitySettings?.productFaqs ?? [],
     reviewScore: sanitySettings?.reviewScore ?? null,
+    reviews,
     recommended,
   };
 }
@@ -177,6 +195,7 @@ export default function Product() {
     productInfoPanels,
     productFaqs,
     reviewScore,
+    reviews,
     recommended,
   } = useLoaderData<typeof loader>();
 
@@ -223,20 +242,19 @@ export default function Product() {
           />
         ),
       })),
+    ...productFaqs
+      .filter((faq) => faq.question && faq.answer?.length)
+      .map((faq) => ({
+        id: faq._key,
+        title: faq.question!,
+        content: (
+          <PortableText
+            value={faq.answer!}
+            components={portableTextComponents}
+          />
+        ),
+      })),
   ];
-
-  const faqItems = productFaqs
-    .filter((faq) => faq.question && faq.answer?.length)
-    .map((faq) => ({
-      id: faq._key,
-      title: faq.question!,
-      content: (
-        <PortableText
-          value={faq.answer!}
-          components={portableTextComponents}
-        />
-      ),
-    }));
 
   return (
     <>
@@ -278,19 +296,12 @@ export default function Product() {
           <Accordion items={accordionItems} defaultOpenIndex={0} />
         </div>
       </div>
-      {faqItems.length ? (
-        <section className="pdp-faq" aria-labelledby="pdp-faq-heading">
-          <h2 className="pdp-faq__heading" id="pdp-faq-heading">
-            Veelgestelde vragen
-          </h2>
-          <Accordion items={faqItems} />
-        </section>
-      ) : null}
       <Suspense fallback={null}>
         <Await resolve={recommended} errorElement={null}>
           {(products) => <RecommendedProducts products={products} />}
         </Await>
       </Suspense>
+      {reviews ? <Reviews data={reviews} /> : null}
       <Analytics.ProductView
         data={{
           products: [
@@ -467,6 +478,10 @@ const SANITY_PRODUCT_QUERY = `*[_type == "product" && store.slug.current == $han
 
 const SANITY_PDP_SETTINGS_QUERY = `*[_type == "settings"][0]{
   "reviewScore": *[_type == "home"][0].reviews.score,
+  "homeReviews": *[_type == "home"][0]{
+    ${SANITY_REVIEWS_PROJECTION},
+    ${SANITY_FEATURED_REVIEWS_PROJECTION}
+  },
   "productInfoPanels": productInfoPanels[]{
     _key,
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),

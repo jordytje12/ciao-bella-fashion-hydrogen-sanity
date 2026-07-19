@@ -3,6 +3,7 @@ import {useAnalytics} from '@shopify/hydrogen';
 import {useLocalePrefix} from '~/lib/i18n';
 import {resolveLinkUrl} from '~/lib/links';
 import {SocialLinks, type SocialLink} from '~/components/SocialLinks';
+import {MarketSelector} from '~/components/LocaleSelector';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -258,9 +259,14 @@ export function Footer({footer}: {footer: FooterData | null}) {
             >
               Cookievoorkeuren
             </button>
-            <p className="font-body text-xs text-cream/60">
-              © 2026 Ciaobellafashion | All Rights Reserved
-            </p>
+            <div className="flex items-center gap-4">
+              <span className="footer-market">
+                <MarketSelector />
+              </span>
+              <p className="font-body text-xs text-cream/60">
+                © 2026 Ciaobellafashion | All Rights Reserved
+              </p>
+            </div>
           </div>
         </div>
       </div>
