@@ -13,5 +13,6 @@ declare global {
     SANITY_DATASET: string;
     SANITY_API_VERSION: string;
     SANITY_API_TOKEN: string;
+    SANITY_STUDIO_URL: string;
   }
 }

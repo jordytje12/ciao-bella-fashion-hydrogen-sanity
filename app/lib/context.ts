@@ -60,7 +60,7 @@ export async function createHydrogenRouterContext(
       useCdn: true,
       stega: {
         enabled: isPreviewEnabled(env.SANITY_PROJECT_ID, previewSession),
-        studioUrl: 'http://localhost:3333',
+        studioUrl: env.SANITY_STUDIO_URL || 'http://localhost:3333',
       }
     },
     preview: {

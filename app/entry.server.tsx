@@ -17,7 +17,7 @@ export default async function handleRequest(
   const {env, sanity} = context;
   const {SanityProvider} = sanity;
   const projectId = env.SANITY_PROJECT_ID;
-  const studioHostname = 'http://localhost:3333';
+  const studioHostname = env.SANITY_STUDIO_URL || 'http://localhost:3333';
   const isPreviewEnabled = sanity.preview?.enabled;
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
