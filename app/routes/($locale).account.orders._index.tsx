@@ -2,6 +2,7 @@ import {
   Link,
   useLoaderData,
   useNavigation,
+  useRouteLoaderData,
   useSearchParams,
 } from 'react-router';
 import type {Route} from './+types/($locale).account.orders._index';
@@ -23,14 +24,25 @@ import type {
   OrderItemFragment,
 } from 'customer-accountapi.generated';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {getSeoMeta, rootSeo} from '~/lib/seo';
+import {getUiTranslations, type UiTranslations} from '~/lib/translations';
+import type {RootLoader} from '~/root';
 
 type OrdersLoaderData = {
   customer: CustomerOrdersFragment;
   filters: OrderFilterParams;
 };
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: 'Orders'}];
+export const meta: Route.MetaFunction = ({matches}) => {
+  const {seo} = rootSeo(matches);
+  const root = matches.find((match) => match?.id === 'root')?.data as
+    | {consent?: {language?: string}}
+    | undefined;
+  const labels = getUiTranslations(root?.consent?.language as never);
+  return getSeoMeta(seo, {
+    title: labels.accountOrdersTitle,
+    robots: {noIndex: true},
+  });
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {
@@ -61,11 +73,13 @@ export async function loader({request, context}: Route.LoaderArgs) {
 export default function Orders() {
   const {customer, filters} = useLoaderData<OrdersLoaderData>();
   const {orders} = customer;
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const labels = getUiTranslations(rootData?.consent.language);
 
   return (
     <div className="orders">
-      <OrderSearchForm currentFilters={filters} />
-      <OrdersTable orders={orders} filters={filters} />
+      <OrderSearchForm currentFilters={filters} labels={labels} />
+      <OrdersTable orders={orders} filters={filters} labels={labels} />
     </div>
   );
 }
@@ -73,9 +87,11 @@ export default function Orders() {
 function OrdersTable({
   orders,
   filters,
+  labels,
 }: {
   orders: CustomerOrdersFragment['orders'];
   filters: OrderFilterParams;
+  labels: UiTranslations;
 }) {
   const hasFilters = !!(filters.name || filters.confirmationNumber);
 
@@ -83,32 +99,40 @@ function OrdersTable({
     <div className="acccount-orders" aria-live="polite">
       {orders?.nodes.length ? (
         <PaginatedResourceSection connection={orders}>
-          {({node: order}) => <OrderItem key={order.id} order={order} />}
+          {({node: order}) => (
+            <OrderItem key={order.id} order={order} labels={labels} />
+          )}
         </PaginatedResourceSection>
       ) : (
-        <EmptyOrders hasFilters={hasFilters} />
+        <EmptyOrders hasFilters={hasFilters} labels={labels} />
       )}
     </div>
   );
 }
 
-function EmptyOrders({hasFilters = false}: {hasFilters?: boolean}) {
+function EmptyOrders({
+  hasFilters = false,
+  labels,
+}: {
+  hasFilters?: boolean;
+  labels: UiTranslations;
+}) {
   return (
     <div>
       {hasFilters ? (
         <>
-          <p>No orders found matching your search.</p>
+          <p>{labels.accountNoOrdersMatch}</p>
           <br />
           <p>
-            <Link to="/account/orders">Clear filters →</Link>
+            <Link to="/account/orders">{labels.accountClearFilters}</Link>
           </p>
         </>
       ) : (
         <>
-          <p>You haven&apos;t placed any orders yet.</p>
+          <p>{labels.accountNoOrders}</p>
           <br />
           <p>
-            <Link to="/collections">Start Shopping →</Link>
+            <Link to="/collections">{labels.accountStartShopping}</Link>
           </p>
         </>
       )}
@@ -118,8 +142,10 @@ function EmptyOrders({hasFilters = false}: {hasFilters?: boolean}) {
 
 function OrderSearchForm({
   currentFilters,
+  labels,
 }: {
   currentFilters: OrderFilterParams;
+  labels: UiTranslations;
 }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigation = useNavigation();
@@ -153,25 +179,25 @@ function OrderSearchForm({
       ref={formRef}
       onSubmit={handleSubmit}
       className="order-search-form"
-      aria-label="Search orders"
+      aria-label={labels.accountFilterOrders}
     >
       <fieldset className="order-search-fieldset">
-        <legend className="order-search-legend">Filter Orders</legend>
+        <legend className="order-search-legend">{labels.accountFilterOrders}</legend>
 
         <div className="order-search-inputs">
           <input
             type="search"
             name={ORDER_FILTER_FIELDS.NAME}
-            placeholder="Order #"
-            aria-label="Order number"
+            placeholder={labels.accountOrderNumber}
+            aria-label={labels.accountOrderNumber}
             defaultValue={currentFilters.name || ''}
             className="order-search-input"
           />
           <input
             type="search"
             name={ORDER_FILTER_FIELDS.CONFIRMATION_NUMBER}
-            placeholder="Confirmation #"
-            aria-label="Confirmation number"
+            placeholder={labels.accountConfirmationNumber}
+            aria-label={labels.accountConfirmationNumber}
             defaultValue={currentFilters.confirmationNumber || ''}
             className="order-search-input"
           />
@@ -179,7 +205,7 @@ function OrderSearchForm({
 
         <div className="order-search-buttons">
           <button type="submit" disabled={isSearching}>
-            {isSearching ? 'Searching' : 'Search'}
+            {isSearching ? labels.accountSearching : labels.searchSubmit}
           </button>
           {hasFilters && (
             <button
@@ -190,7 +216,7 @@ function OrderSearchForm({
                 formRef.current?.reset();
               }}
             >
-              Clear
+              {labels.accountClear}
             </button>
           )}
         </div>
@@ -199,7 +225,13 @@ function OrderSearchForm({
   );
 }
 
-function OrderItem({order}: {order: OrderItemFragment}) {
+function OrderItem({
+  order,
+  labels,
+}: {
+  order: OrderItemFragment;
+  labels: UiTranslations;
+}) {
   const fulfillmentStatus = flattenConnection(order.fulfillments)[0]?.status;
   return (
     <>
@@ -209,12 +241,16 @@ function OrderItem({order}: {order: OrderItemFragment}) {
         </Link>
         <p>{new Date(order.processedAt).toDateString()}</p>
         {order.confirmationNumber && (
-          <p>Confirmation: {order.confirmationNumber}</p>
+          <p>
+            {labels.accountConfirmation}: {order.confirmationNumber}
+          </p>
         )}
         <p>{order.financialStatus}</p>
         {fulfillmentStatus && <p>{fulfillmentStatus}</p>}
         <Money data={order.totalPrice} />
-        <Link to={`/account/orders/${btoa(order.id)}`}>View Order →</Link>
+        <Link to={`/account/orders/${btoa(order.id)}`}>
+          {labels.accountViewOrder}
+        </Link>
       </fieldset>
       <br />
     </>

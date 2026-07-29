@@ -71,13 +71,7 @@ function PaymentIcons() {
         <path d="M15.2 8h3.13c1.85 0 3.29.7 3.72 2.77.15.68.07 1.18-.23 1.5-.33.33-.9.5-1.73.5h-2.45l-.56 3.35H15.4l-.19-1.12-.01-.5V8z" fill="white"/>
       </svg>
 
-      {/* Bancontact */}
-      <svg width="38" height="24" viewBox="0 0 38 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bancontact" role="img">
-        <rect width="38" height="24" rx="4" fill="white" fillOpacity="0.15"/>
-        <text x="19" y="16" textAnchor="middle" fill="white" fontSize="7.5" fontFamily="sans-serif" fontWeight="bold">Bancontact</text>
-      </svg>
-
-      {/* Klarna */}
+      {/* Klarna — common NL BNPL; remove if not enabled in Shopify Payments */}
       <svg width="38" height="24" viewBox="0 0 38 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Klarna" role="img">
         <rect width="38" height="24" rx="4" fill="white" fillOpacity="0.15"/>
         <text x="19" y="16" textAnchor="middle" fill="white" fontSize="9" fontFamily="sans-serif" fontWeight="bold">Klarna</text>

@@ -919,6 +919,24 @@ button.reset:hover:not(:has(> *)) {
   margin-bottom: 0.875rem;
 }
 
+.cart-action-messages {
+  background: #fdf2f0;
+  border: 1px solid rgba(140, 58, 46, 0.25);
+  color: #8c3a2e;
+  font-family: var(--font-body);
+  font-size: 13px;
+  margin-bottom: 0.75rem;
+  padding: 0.625rem 0.75rem;
+}
+
+.cart-action-messages p {
+  margin: 0;
+}
+
+.cart-action-messages p + p {
+  margin-top: 0.35rem;
+}
+
 .cart-codes__summary {
   color: #1C1A18;
   cursor: pointer;

@@ -34,6 +34,9 @@ export default async function handleRequest(
       'https://lh3.googleusercontent.com',
       'https://*.klaviyo.com',
     ],
+    // Dynamically injected Klaviyo onsite script needs an explicit script-src;
+    // Hydrogen sets script-src separately so default-src alone is not enough.
+    scriptSrc: ['https://*.klaviyo.com', 'https://static.klaviyo.com'],
     connectSrc: [
       `https://${projectId}.api.sanity.io`,
       `wss://${projectId}.api.sanity.io`,

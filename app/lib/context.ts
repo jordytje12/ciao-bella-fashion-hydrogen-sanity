@@ -40,6 +40,20 @@ export async function createHydrogenRouterContext(
     throw new Error('SESSION_SECRET environment variable is not set');
   }
 
+  const requiredEnv = [
+    'PUBLIC_STORE_DOMAIN',
+    'PUBLIC_STOREFRONT_API_TOKEN',
+    'PRIVATE_STOREFRONT_API_TOKEN',
+    'PUBLIC_STOREFRONT_ID',
+    'SANITY_PROJECT_ID',
+    'SANITY_DATASET',
+  ] as const;
+  for (const key of requiredEnv) {
+    if (!env?.[key]) {
+      throw new Error(`${key} environment variable is not set`);
+    }
+  }
+
   const waitUntil = executionContext.waitUntil.bind(executionContext);
   const [cache, session, previewSession] = await Promise.all([
     caches.open('hydrogen'),

@@ -28,6 +28,9 @@ export class AppSession implements HydrogenSession {
         httpOnly: true,
         path: '/',
         sameSite: 'lax',
+        // HTTPS-only in production (Oxygen). Local `shopify hydrogen dev`
+        // runs over HTTP, so keep the cookie usable there.
+        secure: process.env.NODE_ENV === 'production',
         secrets,
       },
     });

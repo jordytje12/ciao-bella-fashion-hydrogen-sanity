@@ -9,6 +9,7 @@ import {
   useActionData,
   useNavigation,
   useOutletContext,
+  useRouteLoaderData,
   type Fetcher,
 } from 'react-router';
 import type {Route} from './+types/($locale).account.addresses';
@@ -17,6 +18,9 @@ import {
   DELETE_ADDRESS_MUTATION,
   CREATE_ADDRESS_MUTATION,
 } from '~/graphql/customer-account/CustomerAddressMutations';
+import {getSeoMeta, rootSeo} from '~/lib/seo';
+import {getUiTranslations, type UiTranslations} from '~/lib/translations';
+import type {RootLoader} from '~/root';
 
 export type ActionResponse = {
   addressId?: string | null;
@@ -27,8 +31,16 @@ export type ActionResponse = {
   updatedAddress?: AddressFragment;
 };
 
-export const meta: Route.MetaFunction = () => {
-  return [{title: 'Addresses'}];
+export const meta: Route.MetaFunction = ({matches}) => {
+  const {seo} = rootSeo(matches);
+  const root = matches.find((match) => match?.id === 'root')?.data as
+    | {consent?: {language?: string}}
+    | undefined;
+  const labels = getUiTranslations(root?.consent?.language as never);
+  return getSeoMeta(seo, {
+    title: labels.accountAddressesTitle,
+    robots: {noIndex: true},
+  });
 };
 
 export async function loader({context}: Route.LoaderArgs) {
@@ -259,25 +271,28 @@ export async function action({request, context}: Route.ActionArgs) {
 export default function Addresses() {
   const {customer} = useOutletContext<{customer: CustomerFragment}>();
   const {defaultAddress, addresses} = customer;
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const labels = getUiTranslations(rootData?.consent.language);
 
   return (
     <div className="account-addresses">
-      <h2>Addresses</h2>
+      <h2>{labels.accountAddressesTitle}</h2>
       <br />
       <div>
         <div>
-          <legend>Create address</legend>
-          <NewAddressForm key={addresses.nodes.length} />
+          <legend>{labels.accountCreateAddress}</legend>
+          <NewAddressForm key={addresses.nodes.length} labels={labels} />
         </div>
         <br />
         <hr />
         <br />
         {!addresses.nodes.length ? (
-          <p>You have no addresses saved.</p>
+          <p>{labels.accountNoAddresses}</p>
         ) : (
           <ExistingAddresses
             addresses={addresses}
             defaultAddress={defaultAddress}
+            labels={labels}
           />
         )}
       </div>
@@ -285,7 +300,7 @@ export default function Addresses() {
   );
 }
 
-function NewAddressForm() {
+function NewAddressForm({labels}: {labels: UiTranslations}) {
   const newAddress = {
     address1: '',
     address2: '',
@@ -305,6 +320,7 @@ function NewAddressForm() {
       addressId={'NEW_ADDRESS_ID'}
       address={newAddress}
       defaultAddress={null}
+      labels={labels}
     >
       {({stateForMethod}) => (
         <div>
@@ -313,7 +329,9 @@ function NewAddressForm() {
             formMethod="POST"
             type="submit"
           >
-            {stateForMethod('POST') !== 'idle' ? 'Creating' : 'Create'}
+            {stateForMethod('POST') !== 'idle'
+              ? labels.accountCreating
+              : labels.accountCreate}
           </button>
         </div>
       )}
@@ -324,16 +342,20 @@ function NewAddressForm() {
 function ExistingAddresses({
   addresses,
   defaultAddress,
-}: Pick<CustomerFragment, 'addresses' | 'defaultAddress'>) {
+  labels,
+}: Pick<CustomerFragment, 'addresses' | 'defaultAddress'> & {
+  labels: UiTranslations;
+}) {
   return (
     <div>
-      <legend>Existing addresses</legend>
+      <legend>{labels.accountExistingAddresses}</legend>
       {addresses.nodes.map((address) => (
         <AddressForm
           key={address.id}
           addressId={address.id}
           address={address}
           defaultAddress={defaultAddress}
+          labels={labels}
         >
           {({stateForMethod}) => (
             <div>
@@ -342,14 +364,18 @@ function ExistingAddresses({
                 formMethod="PUT"
                 type="submit"
               >
-                {stateForMethod('PUT') !== 'idle' ? 'Saving' : 'Save'}
+                {stateForMethod('PUT') !== 'idle'
+                  ? labels.accountSaving
+                  : labels.accountSave}
               </button>
               <button
                 disabled={stateForMethod('DELETE') !== 'idle'}
                 formMethod="DELETE"
                 type="submit"
               >
-                {stateForMethod('DELETE') !== 'idle' ? 'Deleting' : 'Delete'}
+                {stateForMethod('DELETE') !== 'idle'
+                  ? labels.accountDeleting
+                  : labels.accountDelete}
               </button>
             </div>
           )}
@@ -363,11 +389,13 @@ export function AddressForm({
   addressId,
   address,
   defaultAddress,
+  labels,
   children,
 }: {
   addressId: AddressFragment['id'];
   address: CustomerAddressInput;
   defaultAddress: CustomerFragment['defaultAddress'];
+  labels: UiTranslations;
   children: (props: {
     stateForMethod: (method: 'PUT' | 'POST' | 'DELETE') => Fetcher['state'];
   }) => React.ReactNode;
@@ -380,112 +408,112 @@ export function AddressForm({
     <Form id={addressId}>
       <fieldset>
         <input type="hidden" name="addressId" defaultValue={addressId} />
-        <label htmlFor="firstName">First name*</label>
+        <label htmlFor="firstName">{labels.accountFirstName}*</label>
         <input
-          aria-label="First name"
+          aria-label={labels.accountFirstName}
           autoComplete="given-name"
           defaultValue={address?.firstName ?? ''}
           id="firstName"
           name="firstName"
-          placeholder="First name"
+          placeholder={labels.accountFirstName}
           required
           type="text"
         />
-        <label htmlFor="lastName">Last name*</label>
+        <label htmlFor="lastName">{labels.accountLastName}*</label>
         <input
-          aria-label="Last name"
+          aria-label={labels.accountLastName}
           autoComplete="family-name"
           defaultValue={address?.lastName ?? ''}
           id="lastName"
           name="lastName"
-          placeholder="Last name"
+          placeholder={labels.accountLastName}
           required
           type="text"
         />
-        <label htmlFor="company">Company</label>
+        <label htmlFor="company">{labels.accountCompany}</label>
         <input
-          aria-label="Company"
+          aria-label={labels.accountCompany}
           autoComplete="organization"
           defaultValue={address?.company ?? ''}
           id="company"
           name="company"
-          placeholder="Company"
+          placeholder={labels.accountCompany}
           type="text"
         />
-        <label htmlFor="address1">Address line*</label>
+        <label htmlFor="address1">{labels.accountAddress1}*</label>
         <input
-          aria-label="Address line 1"
+          aria-label={labels.accountAddress1}
           autoComplete="address-line1"
           defaultValue={address?.address1 ?? ''}
           id="address1"
           name="address1"
-          placeholder="Address line 1*"
+          placeholder={`${labels.accountAddress1}*`}
           required
           type="text"
         />
-        <label htmlFor="address2">Address line 2</label>
+        <label htmlFor="address2">{labels.accountAddress2}</label>
         <input
-          aria-label="Address line 2"
+          aria-label={labels.accountAddress2}
           autoComplete="address-line2"
           defaultValue={address?.address2 ?? ''}
           id="address2"
           name="address2"
-          placeholder="Address line 2"
+          placeholder={labels.accountAddress2}
           type="text"
         />
-        <label htmlFor="city">City*</label>
+        <label htmlFor="city">{labels.accountCity}*</label>
         <input
-          aria-label="City"
+          aria-label={labels.accountCity}
           autoComplete="address-level2"
           defaultValue={address?.city ?? ''}
           id="city"
           name="city"
-          placeholder="City"
+          placeholder={labels.accountCity}
           required
           type="text"
         />
-        <label htmlFor="zoneCode">State / Province*</label>
+        <label htmlFor="zoneCode">{labels.accountZone}*</label>
         <input
-          aria-label="State/Province"
+          aria-label={labels.accountZone}
           autoComplete="address-level1"
           defaultValue={address?.zoneCode ?? ''}
           id="zoneCode"
           name="zoneCode"
-          placeholder="State / Province"
+          placeholder={labels.accountZone}
           required
           type="text"
         />
-        <label htmlFor="zip">Zip / Postal Code*</label>
+        <label htmlFor="zip">{labels.accountZip}*</label>
         <input
-          aria-label="Zip"
+          aria-label={labels.accountZip}
           autoComplete="postal-code"
           defaultValue={address?.zip ?? ''}
           id="zip"
           name="zip"
-          placeholder="Zip / Postal Code"
+          placeholder={labels.accountZip}
           required
           type="text"
         />
-        <label htmlFor="territoryCode">Country Code*</label>
+        <label htmlFor="territoryCode">{labels.accountCountry}*</label>
         <input
-          aria-label="Country code"
+          aria-label={labels.accountCountry}
           autoComplete="country"
           defaultValue={address?.territoryCode ?? ''}
           id="territoryCode"
           name="territoryCode"
-          placeholder="Country"
+          placeholder={labels.accountCountry}
           required
           type="text"
           maxLength={2}
         />
-        <label htmlFor="phoneNumber">Phone</label>
+        <label htmlFor="phoneNumber">{labels.accountPhone}</label>
         <input
-          aria-label="Phone Number"
+          aria-label={labels.accountPhone}
           autoComplete="tel"
           defaultValue={address?.phoneNumber ?? ''}
           id="phoneNumber"
           name="phoneNumber"
-          placeholder="+16135551111"
+          placeholder="+31612345678"
           pattern="^\+?[1-9]\d{3,14}$"
           type="tel"
         />
@@ -496,7 +524,7 @@ export function AddressForm({
             name="defaultAddress"
             type="checkbox"
           />
-          <label htmlFor="defaultAddress">Set as default address</label>
+          <label htmlFor="defaultAddress">{labels.accountDefaultAddress}</label>
         </div>
         {error ? (
           <p>

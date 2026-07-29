@@ -2,8 +2,13 @@ import type {CartApiQueryFragment} from 'storefrontapi.generated';
 import type {CartLayout} from '~/components/CartMain';
 import {CartForm, Money, type OptimisticCart} from '@shopify/hydrogen';
 import {useEffect, useId, useRef, useState} from 'react';
-import {useFetcher} from 'react-router';
+import {useFetcher, useFetchers} from 'react-router';
 import {useAside} from '~/components/Aside';
+
+type CartActionData = {
+  errors?: Array<{message?: string} | null> | null;
+  warnings?: Array<{message?: string} | null> | null;
+};
 
 type CartSummaryProps = {
   cart: OptimisticCart<CartApiQueryFragment | null>;
@@ -24,6 +29,7 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
       <h4 className="sr-only" id={summaryId}>
         Overzicht
       </h4>
+      <CartActionMessages />
       <dl role="group" className="cart-subtotal">
         <dt>Subtotaal</dt>
         <dd>
@@ -52,6 +58,34 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
         </div>
       </details>
       <CartCheckoutActions checkoutUrl={cart?.checkoutUrl} />
+    </div>
+  );
+}
+
+function CartActionMessages() {
+  const fetchers = useFetchers();
+  const messages: string[] = [];
+
+  for (const fetcher of fetchers) {
+    const data = fetcher.data as CartActionData | undefined;
+    if (!data) continue;
+
+    for (const error of data.errors ?? []) {
+      if (error?.message) messages.push(error.message);
+    }
+    for (const warning of data.warnings ?? []) {
+      if (warning?.message) messages.push(warning.message);
+    }
+  }
+
+  const unique = [...new Set(messages)];
+  if (!unique.length) return null;
+
+  return (
+    <div className="cart-action-messages" role="alert" aria-live="polite">
+      {unique.map((message) => (
+        <p key={message}>{message}</p>
+      ))}
     </div>
   );
 }
@@ -169,10 +203,11 @@ function CartGiftCard({
   const [removedCardIndex, setRemovedCardIndex] = useState<number | null>(null);
 
   useEffect(() => {
-    if (giftCardAddFetcher.data) {
-      if (giftCardCodeInput.current !== null) {
-        giftCardCodeInput.current.value = '';
-      }
+    const data = giftCardAddFetcher.data as CartActionData | undefined;
+    if (!data) return;
+    const hasErrors = Boolean(data.errors?.some((error) => error?.message));
+    if (!hasErrors && giftCardCodeInput.current !== null) {
+      giftCardCodeInput.current.value = '';
     }
   }, [giftCardAddFetcher.data]);
 
