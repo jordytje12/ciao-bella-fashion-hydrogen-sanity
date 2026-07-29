@@ -43,7 +43,7 @@ export const FALLBACK_HEADER_MENU: HeaderMenuData = {
     {
       kind: 'link',
       key: 'fallback-collections',
-      label: 'Collections',
+      label: 'Collecties',
       to: '/collections',
       external: false,
       newWindow: false,
@@ -51,7 +51,7 @@ export const FALLBACK_HEADER_MENU: HeaderMenuData = {
     {
       kind: 'link',
       key: 'fallback-about',
-      label: 'About',
+      label: 'Over ons',
       to: '/pages/about',
       external: false,
       newWindow: false,

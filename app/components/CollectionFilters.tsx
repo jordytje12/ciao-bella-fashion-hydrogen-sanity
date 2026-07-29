@@ -120,7 +120,7 @@ function PriceRangeFilter({filter}: {filter: CollectionFilter}) {
       price.min != null || price.max != null
         ? JSON.stringify({price})
         : null;
-    navigate(setFilterSearch(searchParams, filter.id, input), {
+    void navigate(setFilterSearch(searchParams, filter.id, input), {
       preventScrollReset: true,
     });
   };
@@ -239,12 +239,12 @@ export function SortSelect() {
       <span className="hidden sm:inline">Sorteren:</span>
       <select
         value={current}
-        onChange={(event) =>
-          navigate(
+        onChange={(event) => {
+          void navigate(
             setSortSearch(searchParams, event.target.value as SortSlug),
             {preventScrollReset: true},
-          )
-        }
+          );
+        }}
         className="rounded border border-black/20 bg-transparent px-2 py-1.5 font-body text-sm text-black"
       >
         {SORT_OPTIONS.map((option) => (

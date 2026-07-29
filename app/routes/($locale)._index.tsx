@@ -5,7 +5,6 @@ import type {
   FeaturedCollectionFragment,
   HomepageCollectionGridQuery,
 } from 'storefrontapi.generated';
-import {MockShopNotice} from '~/components/MockShopNotice';
 import {HeroBanner} from '~/components/HeroBanner';
 import {
   CollectionGrid,
@@ -120,7 +119,6 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   );
 
   return {
-    isShopLinked: Boolean(context.env.PUBLIC_STORE_DOMAIN),
     collectionGrid,
     featuredProducts,
     featuredHeading: (sanityHome?.featuredProducts?.heading as string) ?? '',
@@ -294,7 +292,6 @@ export default function Homepage() {
 
   return (
     <div className="home">
-      {data.isShopLinked ? null : <MockShopNotice />}
       {hero && desktopImage ? (
         <HeroBanner
           imageUrl={desktopImage}

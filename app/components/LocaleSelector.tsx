@@ -79,6 +79,8 @@ export function MarketSelector() {
   const {pathname} = useLocation();
   const currentCountry = (data?.consent?.country ?? 'NL') as string;
 
+  if (Object.keys(marketDefaults).length <= 1) return null;
+
   function handleChange(newCountry: string) {
     const localeKey = marketDefaults[newCountry];
     if (!localeKey) return;

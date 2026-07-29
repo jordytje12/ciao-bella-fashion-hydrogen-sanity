@@ -26,7 +26,7 @@ export function CollectionGrid({
   if (visibleCollections.length !== COLLECTION_GRID_SIZE) return null;
 
   return (
-    <section className="home-collection-grid" aria-label="Collections">
+    <section className="home-collection-grid" aria-label="Collecties">
       <div className="home-collection-grid__items">
         {visibleCollections.map((collection, index) => (
           <CollectionCard

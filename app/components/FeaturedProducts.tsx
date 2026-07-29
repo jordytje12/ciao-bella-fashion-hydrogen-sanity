@@ -57,7 +57,7 @@ export function FeaturedProducts({
           <div className="home-featured__nav">
             <button
               type="button"
-              aria-label="Previous"
+              aria-label="Vorige"
               className="home-featured__arrow"
               onClick={() => scrollByCard(-1)}
             >
@@ -65,7 +65,7 @@ export function FeaturedProducts({
             </button>
             <button
               type="button"
-              aria-label="Next"
+              aria-label="Volgende"
               className="home-featured__arrow"
               onClick={() => scrollByCard(1)}
             >

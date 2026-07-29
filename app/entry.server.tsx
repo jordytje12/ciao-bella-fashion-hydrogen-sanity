@@ -24,7 +24,11 @@ export default async function handleRequest(
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
       storeDomain: context.env.PUBLIC_STORE_DOMAIN,
     },
-    frameAncestors: isPreviewEnabled ? [studioHostname] : [],
+    // Dashboard-hosted studios embed the storefront through www.sanity.io
+    // before reaching the *.sanity.studio origin, so both must be allowed.
+    frameAncestors: isPreviewEnabled
+      ? [studioHostname, 'https://www.sanity.io']
+      : [],
     defaultSrc: [
       'https://cdn.sanity.io',
       'https://lh3.googleusercontent.com',
