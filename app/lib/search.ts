@@ -10,9 +10,16 @@ type ResultWithItems<Type extends 'predictive' | 'regular', Items> = {
   result: {total: number; items: Items};
 };
 
+// The Storefront `search` query has no COLLECTION type, so collections on the
+// /search page are fetched via a separate predictiveSearch query and merged
+// into the regular search items alongside articles/pages/products.
+type RegularSearchItems = RegularSearchQuery & {
+  collections: NonNullable<PredictiveSearchQuery['predictiveSearch']>['collections'];
+};
+
 export type RegularSearchReturn = ResultWithItems<
   'regular',
-  RegularSearchQuery
+  RegularSearchItems
 >;
 export type PredictiveSearchReturn = ResultWithItems<
   'predictive',

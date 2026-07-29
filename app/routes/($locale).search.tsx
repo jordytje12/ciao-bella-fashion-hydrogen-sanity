@@ -1,9 +1,13 @@
-import {useLoaderData} from 'react-router';
+import {useLoaderData, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).search';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {getSeoMeta, rootSeo} from '~/lib/seo';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
+import {ProductCard} from '~/components/ProductCard';
+import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
+import {getUiTranslations} from '~/lib/translations';
+import type {RootLoader} from '~/root';
 import {
   type RegularSearchReturn,
   type PredictiveSearchReturn,
@@ -12,11 +16,16 @@ import {
 import type {
   RegularSearchQuery,
   PredictiveSearchQuery,
+  ProductItemFragment,
 } from 'storefrontapi.generated';
 
-export const meta: Route.MetaFunction = ({matches}) => {
+export const meta: Route.MetaFunction = ({matches, data}) => {
   const {seo} = rootSeo(matches);
-  return getSeoMeta(seo, {title: 'Zoeken', robots: {noIndex: true}});
+  const term = data?.term;
+  return getSeoMeta(seo, {
+    title: term ? `${term} – Zoeken` : 'Zoeken',
+    robots: {noIndex: true},
+  });
 };
 
 export async function loader({request, context}: Route.LoaderArgs) {
@@ -40,37 +49,72 @@ export async function loader({request, context}: Route.LoaderArgs) {
  */
 export default function SearchPage() {
   const {type, term, result, error} = useLoaderData<typeof loader>();
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  const t = getUiTranslations(rootData?.consent.language);
+
   if (type === 'predictive') return null;
 
+  const hasProducts = Boolean(result?.items.products?.nodes.length);
+
   return (
-    <div className="search">
-      <h1>Search</h1>
-      <SearchForm>
-        {({inputRef}) => (
-          <>
-            <input
-              defaultValue={term}
-              name="q"
-              placeholder="Search…"
-              ref={inputRef}
-              type="search"
-            />
-            &nbsp;
-            <button type="submit">Search</button>
-          </>
-        )}
-      </SearchForm>
-      {error && <p style={{color: 'red'}}>{error}</p>}
+    <div className="search-page">
+      <header className="search-page__header">
+        <h1 className="search-page__title">
+          {term ? `${t.searchResultsFor} “${term}”` : t.searchTitle}
+        </h1>
+        {term ? (
+          <p className="search-page__count">
+            {result?.total ?? 0} {t.searchProducts.toLowerCase()}
+          </p>
+        ) : null}
+        <SearchForm className="search-page__form">
+          {({inputRef}) => (
+            <div className="search-page__field">
+              <input
+                defaultValue={term}
+                name="q"
+                placeholder={t.searchPlaceholder}
+                ref={inputRef}
+                type="search"
+              />
+              <button type="submit">{t.searchSubmit}</button>
+            </div>
+          )}
+        </SearchForm>
+      </header>
+
+      {error && <p className="search-page__error">{error}</p>}
+
       {!term || !result?.total ? (
-        <SearchResults.Empty />
+        <SearchResults.Empty term={term} />
       ) : (
         <SearchResults result={result} term={term}>
-          {({articles, pages, products, term}) => (
-            <div>
-              <SearchResults.Products products={products} term={term} />
+          {({articles, pages, products, collections, term}) => (
+            <>
+              {hasProducts && (
+                <div className="search-page__products">
+                  <PaginatedResourceSection<ProductItemFragment>
+                    connection={products}
+                    resourcesClassName="collection-products-grid"
+                    loadOnScroll
+                  >
+                    {({node: product, index}) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        loading={index < 8 ? 'eager' : undefined}
+                      />
+                    )}
+                  </PaginatedResourceSection>
+                </div>
+              )}
+              <SearchResults.Collections
+                collections={collections}
+                term={term}
+              />
               <SearchResults.Pages pages={pages} term={term} />
               <SearchResults.Articles articles={articles} term={term} />
-            </div>
+            </>
           )}
         </SearchResults>
       )}
@@ -88,37 +132,23 @@ const SEARCH_PRODUCT_FRAGMENT = `#graphql
     __typename
     handle
     id
-    publishedAt
     title
     trackingParameters
-    vendor
-    selectedOrFirstAvailableVariant(
-      selectedOptions: []
-      ignoreUnknownOptions: true
-      caseInsensitiveMatch: true
-    ) {
+    featuredImage {
       id
-      image {
-        url
-        altText
-        width
-        height
-      }
-      price {
+      altText
+      url
+      width
+      height
+    }
+    priceRange {
+      minVariantPrice {
         amount
         currencyCode
       }
-      compareAtPrice {
+      maxVariantPrice {
         amount
         currencyCode
-      }
-      selectedOptions {
-        name
-        value
-      }
-      product {
-        handle
-        title
       }
     }
   }
@@ -141,6 +171,9 @@ const SEARCH_ARTICLE_FRAGMENT = `#graphql
     id
     title
     trackingParameters
+    blog {
+      handle
+    }
   }
 ` as const;
 
@@ -227,29 +260,40 @@ async function regularSearch({
   const variables = getPaginationVariables(request, {pageBy: 8});
   const term = String(url.searchParams.get('q') || '');
 
-  // Search articles, pages, and products for the `q` term
-  const {
-    errors,
-    ...items
-  }: {errors?: Array<{message: string}>} & RegularSearchQuery =
-    await storefront.query(SEARCH_QUERY, {
+  // Search articles, pages, and products for the `q` term. Collections are
+  // fetched separately: the `search` query has no COLLECTION type, only
+  // `predictiveSearch` does.
+  const [searchData, collectionsData] = await Promise.all([
+    storefront.query(SEARCH_QUERY, {
       variables: {...variables, term},
-    });
+    }) as Promise<{errors?: Array<{message: string}>} & RegularSearchQuery>,
+    term
+      ? (storefront.query(SEARCH_COLLECTIONS_QUERY, {
+          variables: {term, limit: 6},
+        }) as Promise<PredictiveSearchQuery>)
+      : Promise.resolve(null),
+  ]);
+
+  const {errors, ...items} = searchData;
 
   if (!items) {
     throw new Error('No search data returned from Shopify API');
   }
 
-  const total = Object.values(items).reduce(
-    (acc: number, {nodes}: {nodes: Array<unknown>}) => acc + nodes.length,
-    0,
-  );
+  const collections = collectionsData?.predictiveSearch?.collections ?? [];
+  const allItems = {...items, collections};
+
+  const total =
+    Object.entries(allItems).reduce((acc: number, [key, value]) => {
+      if (key === 'collections') return acc + (value as Array<unknown>).length;
+      return acc + (value as {nodes: Array<unknown>}).nodes.length;
+    }, 0);
 
   const error = errors
     ? errors.map(({message}: {message: string}) => message).join(', ')
     : undefined;
 
-  return {type: 'regular', term, error, result: {total, items}};
+  return {type: 'regular', term, error, result: {total, items: allItems}};
 }
 
 /**
@@ -291,6 +335,29 @@ const PREDICTIVE_SEARCH_COLLECTION_FRAGMENT = `#graphql
   }
 ` as const;
 
+// Used by regularSearch() to fetch collections for the /search page, since
+// the regular `search` query has no COLLECTION type.
+const SEARCH_COLLECTIONS_QUERY = `#graphql
+  query SearchCollections(
+    $country: CountryCode
+    $language: LanguageCode
+    $limit: Int!
+    $term: String!
+  ) @inContext(country: $country, language: $language) {
+    predictiveSearch(
+      limit: $limit,
+      limitScope: EACH,
+      query: $term,
+      types: [COLLECTION],
+    ) {
+      collections {
+        ...PredictiveCollection
+      }
+    }
+  }
+  ${PREDICTIVE_SEARCH_COLLECTION_FRAGMENT}
+` as const;
+
 const PREDICTIVE_SEARCH_PAGE_FRAGMENT = `#graphql
   fragment PredictivePage on Page {
     __typename
@@ -308,6 +375,12 @@ const PREDICTIVE_SEARCH_PRODUCT_FRAGMENT = `#graphql
     title
     handle
     trackingParameters
+    featuredImage {
+      url
+      altText
+      width
+      height
+    }
     selectedOrFirstAvailableVariant(
       selectedOptions: []
       ignoreUnknownOptions: true
@@ -321,6 +394,10 @@ const PREDICTIVE_SEARCH_PRODUCT_FRAGMENT = `#graphql
         height
       }
       price {
+        amount
+        currencyCode
+      }
+      compareAtPrice {
         amount
         currencyCode
       }

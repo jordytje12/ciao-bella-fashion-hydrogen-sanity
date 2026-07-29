@@ -1,4 +1,10 @@
-import {Link, useFetcher, type Fetcher} from 'react-router';
+import {
+  Link,
+  useFetcher,
+  useRouteLoaderData,
+  type Fetcher,
+  type FetcherWithComponents,
+} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import React, {useRef, useEffect} from 'react';
 import {
@@ -7,6 +13,13 @@ import {
   type PredictiveSearchReturn,
 } from '~/lib/search';
 import {useAside} from './Aside';
+import {useLocalePrefix} from '~/lib/i18n';
+import {getUiTranslations} from '~/lib/translations';
+import type {RootLoader} from '~/root';
+import {
+  SEARCH_ENDPOINT,
+  PREDICTIVE_SEARCH_LIMIT,
+} from './SearchFormPredictive';
 
 type PredictiveSearchItems = PredictiveSearchReturn['result']['items'];
 
@@ -15,12 +28,12 @@ type UsePredictiveSearchReturn = {
   total: number;
   inputRef: React.MutableRefObject<HTMLInputElement | null>;
   items: PredictiveSearchItems;
-  fetcher: Fetcher<PredictiveSearchReturn>;
+  fetcher: FetcherWithComponents<PredictiveSearchReturn>;
 };
 
 type SearchResultsPredictiveArgs = Pick<
   UsePredictiveSearchReturn,
-  'term' | 'total' | 'inputRef' | 'items'
+  'term' | 'total' | 'inputRef' | 'items' | 'fetcher'
 > & {
   state: Fetcher['state'];
   closeSearch: () => void;
@@ -66,6 +79,7 @@ export function SearchResultsPredictive({
   return children({
     items,
     closeSearch,
+    fetcher,
     inputRef,
     state: fetcher.state,
     term,
@@ -85,33 +99,26 @@ function SearchResultsPredictiveArticles({
   articles,
   closeSearch,
 }: PartialPredictiveSearchResult<'articles'>) {
+  const localePrefix = useLocalePrefix();
+  const t = useUiTranslations();
+
   if (!articles.length) return null;
 
   return (
     <div className="predictive-search-result" key="articles">
-      <h5>Articles</h5>
-      <ul>
-        {articles.map((article) => {
+      <h5 className="predictive-search__heading">{t.searchArticles}</h5>
+      <ul className="predictive-search__list">
+        {articles.slice(0, 4).map((article) => {
           const articleUrl = urlWithTrackingParams({
-            baseUrl: `/blogs/${article.blog.handle}/${article.handle}`,
+            baseUrl: `${localePrefix}/blogs/${article.blog.handle}/${article.handle}`,
             trackingParams: article.trackingParameters,
             term: term.current ?? '',
           });
 
           return (
-            <li className="predictive-search-result-item" key={article.id}>
+            <li key={article.id}>
               <Link onClick={closeSearch} to={articleUrl}>
-                {article.image?.url && (
-                  <Image
-                    alt={article.image.altText ?? ''}
-                    src={article.image.url}
-                    width={50}
-                    height={50}
-                  />
-                )}
-                <div>
-                  <span>{article.title}</span>
-                </div>
+                {article.title}
               </Link>
             </li>
           );
@@ -126,33 +133,26 @@ function SearchResultsPredictiveCollections({
   collections,
   closeSearch,
 }: PartialPredictiveSearchResult<'collections'>) {
+  const localePrefix = useLocalePrefix();
+  const t = useUiTranslations();
+
   if (!collections.length) return null;
 
   return (
     <div className="predictive-search-result" key="collections">
-      <h5>Collections</h5>
-      <ul>
-        {collections.map((collection) => {
+      <h5 className="predictive-search__heading">{t.searchCollections}</h5>
+      <ul className="predictive-search__list">
+        {collections.slice(0, 4).map((collection) => {
           const collectionUrl = urlWithTrackingParams({
-            baseUrl: `/collections/${collection.handle}`,
+            baseUrl: `${localePrefix}/collections/${collection.handle}`,
             trackingParams: collection.trackingParameters,
             term: term.current,
           });
 
           return (
-            <li className="predictive-search-result-item" key={collection.id}>
+            <li key={collection.id}>
               <Link onClick={closeSearch} to={collectionUrl}>
-                {collection.image?.url && (
-                  <Image
-                    alt={collection.image.altText ?? ''}
-                    src={collection.image.url}
-                    width={50}
-                    height={50}
-                  />
-                )}
-                <div>
-                  <span>{collection.title}</span>
-                </div>
+                {collection.title}
               </Link>
             </li>
           );
@@ -167,25 +167,26 @@ function SearchResultsPredictivePages({
   pages,
   closeSearch,
 }: PartialPredictiveSearchResult<'pages'>) {
+  const localePrefix = useLocalePrefix();
+  const t = useUiTranslations();
+
   if (!pages.length) return null;
 
   return (
     <div className="predictive-search-result" key="pages">
-      <h5>Pages</h5>
-      <ul>
-        {pages.map((page) => {
+      <h5 className="predictive-search__heading">{t.searchPages}</h5>
+      <ul className="predictive-search__list">
+        {pages.slice(0, 4).map((page) => {
           const pageUrl = urlWithTrackingParams({
-            baseUrl: `/pages/${page.handle}`,
+            baseUrl: `${localePrefix}/pages/${page.handle}`,
             trackingParams: page.trackingParameters,
             term: term.current,
           });
 
           return (
-            <li className="predictive-search-result-item" key={page.id}>
+            <li key={page.id}>
               <Link onClick={closeSearch} to={pageUrl}>
-                <div>
-                  <span>{page.title}</span>
-                </div>
+                {page.title}
               </Link>
             </li>
           );
@@ -200,61 +201,99 @@ function SearchResultsPredictiveProducts({
   products,
   closeSearch,
 }: PartialPredictiveSearchResult<'products'>) {
+  const localePrefix = useLocalePrefix();
+  const t = useUiTranslations();
+
   if (!products.length) return null;
 
   return (
     <div className="predictive-search-result" key="products">
-      <h5>Products</h5>
-      <ul>
+      <h5 className="predictive-search__heading">{t.searchProducts}</h5>
+      <div className="predictive-search__grid">
         {products.map((product) => {
           const productUrl = urlWithTrackingParams({
-            baseUrl: `/products/${product.handle}`,
+            baseUrl: `${localePrefix}/products/${product.handle}`,
             trackingParams: product.trackingParameters,
-            term: term.current,
+            term: term.current ?? '',
           });
 
-          const price = product?.selectedOrFirstAvailableVariant?.price;
-          const image = product?.selectedOrFirstAvailableVariant?.image;
+          const variant = product?.selectedOrFirstAvailableVariant;
+          const image = product?.featuredImage ?? variant?.image;
+          const price = variant?.price;
+          const compareAtPrice = variant?.compareAtPrice;
+
           return (
-            <li className="predictive-search-result-item" key={product.id}>
-              <Link to={productUrl} onClick={closeSearch}>
+            <Link
+              className="predictive-search__product"
+              key={product.id}
+              onClick={closeSearch}
+              to={productUrl}
+            >
+              <div className="predictive-search__product-image">
                 {image && (
                   <Image
                     alt={image.altText ?? ''}
                     src={image.url}
-                    width={50}
-                    height={50}
+                    width={180}
+                    height={225}
+                    sizes="180px"
                   />
                 )}
-                <div>
-                  <p>{product.title}</p>
-                  <small>{price && <Money data={price} />}</small>
-                </div>
-              </Link>
-            </li>
+              </div>
+              <p className="predictive-search__product-title">
+                {product.title}
+              </p>
+              <small className="predictive-search__product-price">
+                {price && <Money data={price} />}
+                {compareAtPrice && (
+                  <s className="predictive-search__product-compare-price">
+                    <Money data={compareAtPrice} />
+                  </s>
+                )}
+              </small>
+            </Link>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }
 
 function SearchResultsPredictiveQueries({
   queries,
-  queriesDatalistId,
-}: PartialPredictiveSearchResult<'queries', never> & {
-  queriesDatalistId: string;
-}) {
+  inputRef,
+  fetcher,
+}: PartialPredictiveSearchResult<'queries', 'inputRef' | 'fetcher'>) {
   if (!queries.length) return null;
 
+  function selectSuggestion(suggestion: string) {
+    if (inputRef.current) {
+      inputRef.current.value = suggestion;
+      inputRef.current.focus();
+    }
+    void fetcher.submit(
+      {q: suggestion, limit: PREDICTIVE_SEARCH_LIMIT, predictive: true},
+      {method: 'GET', action: SEARCH_ENDPOINT},
+    );
+  }
+
   return (
-    <datalist id={queriesDatalistId}>
+    <div className="predictive-search__suggestions">
       {queries.map((suggestion) => {
         if (!suggestion) return null;
 
-        return <option key={suggestion.text} value={suggestion.text} />;
+        return (
+          <button
+            className="predictive-search__suggestion"
+            key={suggestion.text}
+            onClick={() => selectSuggestion(suggestion.text)}
+            type="button"
+          >
+            {suggestion.text}
+          </button>
+        );
       })}
-    </datalist>
+    </div>
   );
 }
 
@@ -263,15 +302,27 @@ function SearchResultsPredictiveEmpty({
 }: {
   term: React.MutableRefObject<string>;
 }) {
-  if (!term.current) {
-    return null;
-  }
+  const t = useUiTranslations();
 
   return (
-    <p>
-      No results found for <q>{term.current}</q>
+    <p className="predictive-search__empty">
+      {term.current ? (
+        <>
+          {t.searchNoResults} <q>{term.current}</q>
+        </>
+      ) : (
+        t.searchEmptyPrompt
+      )}
     </p>
   );
+}
+
+/**
+ * Hook that returns the UI translations for the current storefront language.
+ */
+function useUiTranslations() {
+  const rootData = useRouteLoaderData<RootLoader>('root');
+  return getUiTranslations(rootData?.consent.language);
 }
 
 /**
