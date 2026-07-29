@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useId, useRef, useState} from 'react';
+import type {CSSProperties} from 'react';
 import {Link, NavLink, useLocation} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
 import {useLocalePrefix} from '~/lib/i18n';
@@ -175,6 +176,7 @@ function MenuGroup({
   onClose: () => void;
 }) {
   const localePrefix = useLocalePrefix();
+  const splitLinks = item.links.length > 6;
 
   return (
     <>
@@ -205,7 +207,18 @@ function MenuGroup({
           onMouseEnter={onCancelClose}
           onMouseLeave={onScheduleClose}
         >
-          <ul className="mega-menu-panel__links">
+          <ul
+            className={`mega-menu-panel__links${
+              splitLinks ? ' mega-menu-panel__links--split' : ''
+            }`}
+            style={
+              splitLinks
+                ? ({
+                    '--menu-link-rows': Math.ceil(item.links.length / 2),
+                  } as CSSProperties)
+                : undefined
+            }
+          >
             {item.links.map((link) => (
               <li key={link.to}>
                 <NavLink
