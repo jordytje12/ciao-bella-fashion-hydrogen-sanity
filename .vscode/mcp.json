@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/tradual/javascript-react-router",
+      "type": "http"
+    }
+  }
+}

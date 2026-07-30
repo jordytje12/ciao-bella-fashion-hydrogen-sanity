@@ -8,12 +8,14 @@ import {MarketSelector} from '~/components/LocaleSelector';
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type UspCard = {
+  _key?: string;
   iconUrl?: string | null;
   title?: string | null;
   subtext?: string | null;
 };
 
 export type FooterMenuLink = {
+  _key?: string;
   label?: string | null;
   link?: {
     _type: string;
@@ -23,6 +25,7 @@ export type FooterMenuLink = {
 };
 
 export type FooterMenuColumn = {
+  _key?: string;
   title?: string | null;
   links?: FooterMenuLink[] | null;
 };
@@ -91,7 +94,7 @@ export function FooterUspBar({cards}: {cards: UspCard[]}) {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {cards.map((card, i) => (
             <div
-              key={i}
+              key={card._key ?? i}
               className="flex items-start gap-4"
             >
               {card.iconUrl && (
@@ -165,7 +168,7 @@ export function Footer({footer}: {footer: FooterData | null}) {
 
             {/* Kolom 2 & 3 — Menu kolommen */}
             {menuColumns.map((column, colIdx) => (
-              <div key={colIdx} className="flex flex-col gap-3">
+              <div key={column._key ?? colIdx} className="flex flex-col gap-3">
                 {column.title && (
                   <h3 className="font-heading text-base font-semibold uppercase tracking-widest text-cream">
                     {column.title}
@@ -188,7 +191,7 @@ export function Footer({footer}: {footer: FooterData | null}) {
                         : null;
 
                       return (
-                        <li key={linkIdx}>
+                        <li key={item._key ?? linkIdx}>
                           {url ? (
                             isAbsoluteExternal ? (
                               <a
@@ -259,7 +262,7 @@ export function Footer({footer}: {footer: FooterData | null}) {
                 <MarketSelector />
               </span>
               <p className="font-body text-xs text-cream/60">
-                © 2026 Ciaobellafashion | All Rights Reserved
+                © {new Date().getFullYear()} Ciaobellafashion | All Rights Reserved
               </p>
             </div>
           </div>

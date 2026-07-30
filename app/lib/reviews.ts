@@ -63,8 +63,10 @@ export function resolveReviews(
       (item): item is SanityReviewItemRaw & {text: string; rating: number} =>
         Boolean(item.text) && typeof item.rating === 'number',
     )
-    .map((item) => ({
-      id: item._id ?? Math.random().toString(36).slice(2),
+    .map((item, index) => ({
+      // Deterministic fallback — `Math.random()` here would change the key
+      // on every render/request and defeat React's reconciliation.
+      id: item._id ?? `review-${index}`,
       author: item.author ?? '',
       rating: item.rating,
       date: item.date ?? null,

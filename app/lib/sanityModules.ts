@@ -1,7 +1,11 @@
 import type {CurrencyCode} from '@shopify/hydrogen/storefront-api-types';
 import type {FeaturedProductItem} from '~/components/FeaturedProducts';
 import type {DualCardItem} from '~/components/DualCardBanner';
-import {urlFor} from '~/lib/sanityImage';
+import {
+  sanityImageProps,
+  urlFor,
+  type SanityImageConfig,
+} from '~/lib/sanityImage';
 import {resolveLinkUrl} from '~/lib/links';
 
 export type SanityLinkRaw = {
@@ -11,6 +15,7 @@ export type SanityLinkRaw = {
 };
 
 export type SanityDualCardRaw = {
+  _key?: string;
   image?: {
     asset?: {
       url?: string | null;
@@ -95,19 +100,22 @@ export function resolveFeaturedProductItem(
   };
 }
 
-export function resolveDualCardBanner(rawCards: SanityDualCardRaw[]): DualCardItem[] {
+export function resolveDualCardBanner(
+  rawCards: SanityDualCardRaw[],
+  config: SanityImageConfig,
+): DualCardItem[] {
   const result: DualCardItem[] = [];
   for (const card of rawCards) {
     if (!card.image?.asset?.url) continue;
-    const imageUrl = urlFor(card.image as Parameters<typeof urlFor>[0])
-      .width(1200)
-      .height(1500)
-      .auto('format')
-      .fit('crop')
-      .url();
+    const {src: imageUrl, srcSet} = sanityImageProps(
+      card.image as Parameters<typeof urlFor>[0],
+      config,
+      {width: 1200, height: 1500},
+    );
     if (!imageUrl) continue;
     result.push({
-      image: {url: imageUrl, altText: card.title ?? undefined},
+      key: card._key,
+      image: {url: imageUrl, srcSet, altText: card.title ?? undefined},
       title: card.title ?? '',
       subtitle: card.subtitle ?? null,
       buttonText: card.buttonText ?? null,

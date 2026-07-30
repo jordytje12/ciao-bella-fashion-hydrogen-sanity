@@ -1,11 +1,11 @@
 import {useEffect, useRef, useState} from 'react';
 import {Link} from 'react-router';
 import {Image, Money} from '@shopify/hydrogen';
-import {urlFor} from '~/lib/sanityImage';
 import type {FeaturedProductItem} from '~/components/FeaturedProducts';
 
 export type ShopTheLookLook = {
-  image: object;
+  key?: string;
+  image: {src: string; srcSet: string};
   products: FeaturedProductItem[];
 };
 
@@ -102,35 +102,31 @@ export function ShopTheLook({heading, looks}: ShopTheLookData) {
         {/* ── Left: image slider ── */}
         <div className="stl__left">
           <div className="stl__image-track" ref={trackRef}>
-            {looks.map((look, i) => {
-              const imageUrl = urlFor(look.image as Parameters<typeof urlFor>[0])
-                .auto('format')
-                .fit('crop')
-                .url();
-              return (
-                <div
-                  key={i}
-                  className="stl__image-slide"
-                  aria-hidden={i !== activeLook}
-                >
-                  {imageUrl && (
-                    <img
-                      src={imageUrl}
-                      alt={`Look ${i + 1}`}
-                      loading={i === 0 ? 'eager' : 'lazy'}
-                      className="stl__image"
-                    />
-                  )}
-                </div>
-              );
-            })}
+            {looks.map((look, i) => (
+              <div
+                key={look.key ?? i}
+                className="stl__image-slide"
+                aria-hidden={i !== activeLook}
+              >
+                {look.image.src && (
+                  <img
+                    src={look.image.src}
+                    srcSet={look.image.srcSet}
+                    sizes="(min-width: 64em) 45vw, 100vw"
+                    alt={`Look ${i + 1}`}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    className="stl__image"
+                  />
+                )}
+              </div>
+            ))}
           </div>
 
           {showDots && (
             <div className="stl__dots" aria-label="Look navigation">
-              {looks.map((_, i) => (
+              {looks.map((look, i) => (
                 <button
-                  key={i}
+                  key={look.key ?? i}
                   type="button"
                   aria-label={`Look ${i + 1}`}
                   aria-pressed={i === activeLook}

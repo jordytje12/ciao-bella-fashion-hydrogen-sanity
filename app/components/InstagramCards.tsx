@@ -1,7 +1,8 @@
 import {Link} from 'react-router';
 
 export type InstagramCardItem = {
-  image: {url: string};
+  key?: string;
+  image: {url: string; srcSet?: string};
   username: string;
   title: string;
   handle: string;
@@ -40,13 +41,14 @@ export function InstagramCards({data}: {data: InstagramCardsData}) {
       <div className="home-instagram__items">
         {data.cards.map((card, index) => (
           <Link
-            key={index}
+            key={card.key ?? index}
             to={`/products/${card.handle}`}
             prefetch="viewport"
             className="home-instagram__card"
           >
             <img
               src={card.image.url}
+              srcSet={card.image.srcSet}
               alt={card.title}
               className="home-instagram__image"
               loading="lazy"

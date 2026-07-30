@@ -7,7 +7,7 @@ import globals from 'globals';
 import typescriptEslint from '@typescript-eslint/eslint-plugin';
 import _import from 'eslint-plugin-import';
 import tsParser from '@typescript-eslint/parser';
-import jest from 'eslint-plugin-jest';
+import vitest from '@vitest/eslint-plugin';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import js from '@eslint/js';
@@ -222,19 +222,18 @@ export default [
       },
     },
   },
-  ...compat.extends('plugin:jest/recommended').map((config) => ({
-    ...config,
-    files: ['**/*.test.*'],
-  })),
   {
     files: ['**/*.test.*'],
     plugins: {
-      jest,
+      vitest,
+    },
+    rules: {
+      ...vitest.configs.recommended.rules,
     },
     languageOptions: {
       globals: {
         ...globals.node,
-        ...globals.jest,
+        ...vitest.environments.env.globals,
       },
     },
   },

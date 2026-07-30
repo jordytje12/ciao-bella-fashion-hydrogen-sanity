@@ -6,6 +6,28 @@
 @import 'tailwindcss';
 
 /*
+ * Self-hosted fonts — voorheen render-blocking geladen vanaf
+ * fonts.googleapis.com (derde partij, extra DNS/TLS-round trip en een
+ * AVG-discussiepunt). Beide bestanden zijn variable fonts, dus één
+ * `.woff2` per familie dekt het hele gewicht-bereik.
+ */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../assets/fonts/cormorant-garamond-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('../assets/fonts/dm-sans-latin.woff2') format('woff2');
+}
+
+/*
  * -------------------------------------------------------
  * Brand design tokens — kleuren & typografie
  *

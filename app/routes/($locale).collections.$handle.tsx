@@ -24,7 +24,12 @@ import {
 } from '~/components/CollectionModules';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import type {ProductItemFragment} from 'storefrontapi.generated';
-import {urlFor} from '~/lib/sanityImage';
+import {
+  sanityImageConfig,
+  sanityImageProps,
+  urlFor,
+  type SanityImageConfig,
+} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 import {
   hydrateProductsByGid,
@@ -116,6 +121,7 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
   const modules = await resolveModules(
     context,
     sanityCollection?.modules ?? [],
+    sanityImageConfig(context.env),
   );
 
   return {
@@ -160,6 +166,7 @@ type SanityCollectionPageRaw = {
 async function resolveModules(
   context: Route.LoaderArgs['context'],
   modules: SanityCollectionModuleRaw[],
+  config: SanityImageConfig,
 ): Promise<ResolvedCollectionModule[]> {
   if (!modules.length) return [];
 
@@ -177,29 +184,33 @@ async function resolveModules(
   for (const module of modules) {
     if (module._type === 'hero') {
       if (!module.imageDesktop?.asset?.url || !module.title) continue;
-      const imageUrl = urlFor(module.imageDesktop as Parameters<typeof urlFor>[0])
-        .auto('format')
-        .fit('crop')
-        .url();
-      if (!imageUrl) continue;
-      const mobileImageUrl = module.imageMobile?.asset?.url
-        ? urlFor(module.imageMobile as Parameters<typeof urlFor>[0])
-            .auto('format')
-            .fit('crop')
-            .url()
+      const desktopImage = sanityImageProps(
+        module.imageDesktop as Parameters<typeof urlFor>[0],
+        config,
+        {width: 2000},
+      );
+      if (!desktopImage.src) continue;
+      const mobileImage = module.imageMobile?.asset?.url
+        ? sanityImageProps(
+            module.imageMobile as Parameters<typeof urlFor>[0],
+            config,
+            {width: 900},
+          )
         : null;
       resolved.push({
         key: module._key,
         type: 'promoBanner',
-        imageUrl,
-        mobileImageUrl,
+        imageUrl: desktopImage.src,
+        imageSrcSet: desktopImage.srcSet,
+        mobileImageUrl: mobileImage?.src ?? null,
+        mobileImageSrcSet: mobileImage?.srcSet,
         title: module.title,
         description: module.description ?? null,
         buttonText: module.button_text ?? 'Shop now',
         url: resolveLinkUrl(module.link?.[0]),
       });
     } else if (module._type === 'dualCardBanner') {
-      const cards = resolveDualCardBanner(module.cards ?? []);
+      const cards = resolveDualCardBanner(module.cards ?? [], config);
       if (cards.length !== 2) continue;
       resolved.push({key: module._key, type: 'dualCardBanner', cards});
     } else if (module._type === 'featuredProducts') {
@@ -451,6 +462,7 @@ const SANITY_COLLECTION_QUERY = `*[_type == "collection" && store.slug.current =
     },
     _type == "dualCardBanner" => {
       cards[]{
+        _key,
         image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
         "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
         "subtitle": coalesce(subtitle[language == $language][0].value, subtitle[language == "nl"][0].value),

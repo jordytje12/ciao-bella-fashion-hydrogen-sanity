@@ -14,5 +14,8 @@ declare global {
     SANITY_API_VERSION: string;
     SANITY_API_TOKEN: string;
     SANITY_STUDIO_URL: string;
+    // Marketing tags — optioneel, laten leeg = tag laadt niet (lokaal/preview).
+    PUBLIC_GTM_CONTAINER_ID?: string;
+    PUBLIC_META_PIXEL_ID?: string;
   }
 }

@@ -11,7 +11,9 @@ export type ResolvedCollectionModule =
       key: string;
       type: 'promoBanner';
       imageUrl: string;
+      imageSrcSet?: string;
       mobileImageUrl: string | null;
+      mobileImageSrcSet?: string;
       title: string;
       description: string | null;
       buttonText: string;
@@ -48,7 +50,9 @@ export function CollectionModules({
               <HeroBanner
                 key={module.key}
                 imageUrl={module.imageUrl}
+                imageSrcSet={module.imageSrcSet}
                 mobileImageUrl={module.mobileImageUrl ?? module.imageUrl}
+                mobileImageSrcSet={module.mobileImageSrcSet}
                 title={module.title}
                 description={module.description ?? undefined}
                 link={{text: module.buttonText, url: module.url}}

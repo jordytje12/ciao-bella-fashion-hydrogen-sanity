@@ -1,7 +1,7 @@
 import {useLoaderData, data, type HeadersFunction} from 'react-router';
 import type {Route} from './+types/($locale).cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
-import {CartForm} from '@shopify/hydrogen';
+import {Analytics, CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
 import {getSeoMeta, rootSeo} from '~/lib/seo';
 
@@ -108,8 +108,9 @@ export default function Cart() {
 
   return (
     <div className="cart">
-      <h1>Cart</h1>
+      <h1>Winkelwagen</h1>
       <CartMain layout="page" cart={cart} />
+      <Analytics.CartView />
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import {Link} from 'react-router';
 
 export type DualCardItem = {
-  image: {url: string; altText?: string | null};
+  key?: string;
+  image: {url: string; srcSet?: string; altText?: string | null};
   title: string;
   subtitle?: string | null;
   buttonText?: string | null;
@@ -16,7 +17,7 @@ export function DualCardBanner({cards}: {cards: DualCardItem[]}) {
       <div className="home-dual-card-banner__items">
         {cards.map((card, index) => (
           <Link
-            key={index}
+            key={card.key ?? index}
             className="home-dual-card-banner__card"
             to={card.url}
             prefetch="viewport"
@@ -27,6 +28,7 @@ export function DualCardBanner({cards}: {cards: DualCardItem[]}) {
               loading="lazy"
               sizes="(min-width: 64em) 50vw, 100vw"
               src={card.image.url}
+              srcSet={card.image.srcSet}
             />
             <div className="home-dual-card-banner__overlay">
               <h2 className="home-dual-card-banner__title">{card.title}</h2>

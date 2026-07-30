@@ -4,6 +4,7 @@ const COLLECTION_GRID_SIZE = 5;
 
 export type CollectionGridImage = {
   url: string;
+  srcSet?: string;
   altText?: string | null;
   width?: number | null;
   height?: number | null;
@@ -60,6 +61,7 @@ export function CollectionCard({
         loading={index < 3 ? 'eager' : 'lazy'}
         sizes="(min-width: 64em) 20vw, 33vw"
         src={collection.image.url}
+        srcSet={collection.image.srcSet}
         width={collection.image.width ?? undefined}
       />
       <span className="home-collection-card__title">

@@ -4,7 +4,9 @@ import {
   useNonce,
   type SeoConfig,
 } from '@shopify/hydrogen';
+import {useEffect} from 'react';
 import {SITE_NAME} from '~/lib/seo';
+import {captureError} from '~/lib/errorReporting';
 import {
   Link,
   Outlet,
@@ -19,6 +21,8 @@ import {
 } from 'react-router';
 import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
+import cormorantGaramondFont from '~/assets/fonts/cormorant-garamond-latin.woff2?url';
+import dmSansFont from '~/assets/fonts/dm-sans-latin.woff2?url';
 import {FALLBACK_HEADER_MENU, loadHeaderMenu} from '~/lib/headerMenu';
 import {sanityLanguage, useLocalePrefix} from '~/lib/i18n';
 import type {FooterData} from '~/components/Footer';
@@ -28,6 +32,7 @@ import tailwindCss from './styles/tailwind.css?url';
 import {PageLayout} from './components/PageLayout';
 import {NotFound} from './components/NotFound';
 import {KlaviyoOnsite} from './components/KlaviyoOnsite';
+import {MarketingTags} from './components/MarketingTags';
 import {getUiTranslations} from './lib/translations';
 import {Sanity} from 'hydrogen-sanity';
 import {usePreviewMode} from 'hydrogen-sanity/preview';
@@ -77,13 +82,20 @@ export function links() {
       rel: 'preconnect',
       href: 'https://shop.app',
     },
+    // Self-hosted fonts (zie app/styles/tailwind.css) — preloaden voorkomt
+    // een flits van fallback-tekst, want beide worden boven de vouw gebruikt.
     {
-      rel: 'preconnect',
-      href: 'https://fonts.googleapis.com',
+      rel: 'preload',
+      href: cormorantGaramondFont,
+      as: 'font',
+      type: 'font/woff2',
+      crossOrigin: 'anonymous',
     },
     {
-      rel: 'preconnect',
-      href: 'https://fonts.gstatic.com',
+      rel: 'preload',
+      href: dmSansFont,
+      as: 'font',
+      type: 'font/woff2',
       crossOrigin: 'anonymous',
     },
     {rel: 'icon', type: 'image/svg+xml', href: favicon},
@@ -115,6 +127,10 @@ export async function loader(args: Route.LoaderArgs) {
       // localize the privacy banner
       country: args.context.storefront.i18n.country,
       language: args.context.storefront.i18n.language,
+    },
+    marketing: {
+      gtmContainerId: env.PUBLIC_GTM_CONTAINER_ID ?? null,
+      metaPixelId: env.PUBLIC_META_PIXEL_ID ?? null,
     },
   };
 }
@@ -189,11 +205,8 @@ export function Layout({children}: {children?: React.ReactNode}) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width,initial-scale=1" />
-        {/* Google Fonts — Cormorant Garamond (heading) + DM Sans (body) */}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:wght@400;500;600;700&display=swap"
-        />
+        {/* Cormorant Garamond (heading) + DM Sans (body) zijn self-hosted via
+            app/styles/tailwind.css — geen render-blocking Google Fonts-request meer. */}
         <link rel="stylesheet" href={tailwindCss}></link>
         <link rel="stylesheet" href={resetStyles}></link>
         <link rel="stylesheet" href={appStyles}></link>
@@ -228,6 +241,10 @@ export default function App() {
         <Outlet />
       </PageLayout>
       <KlaviyoOnsite companyId={data.footer?.klaviyoCompanyId} />
+      <MarketingTags
+        gtmContainerId={data.marketing.gtmContainerId}
+        metaPixelId={data.marketing.metaPixelId}
+      />
     </Analytics.Provider>
   );
 }
@@ -242,6 +259,13 @@ export function ErrorBoundary() {
   if (isRouteErrorResponse(error)) {
     errorStatus = error.status;
   }
+
+  useEffect(() => {
+    // 404s are routine, not exceptional — only report real errors.
+    if (errorStatus !== 404) {
+      captureError(error, {stage: 'route-error-boundary', status: errorStatus});
+    }
+  }, [error, errorStatus]);
 
   if (errorStatus === 404) {
     const notFound = <NotFound standalone={!rootData} />;
@@ -289,6 +313,7 @@ const TOPBAR_QUERY = `*[_type == "settings"][0]{
 
 const SANITY_FOOTER_QUERY = `*[_type == "footer"][0]{
   "uspCards": uspCards[]{
+    _key,
     "iconUrl": icon.asset->url,
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
     "subtext": coalesce(subtext[language == $language][0].value, subtext[language == "nl"][0].value)
@@ -301,8 +326,10 @@ const SANITY_FOOTER_QUERY = `*[_type == "footer"][0]{
     url
   },
   "menuColumns": menuColumns[]{
+    _key,
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
     "links": links[]{
+      _key,
       "label": coalesce(label[language == $language][0].value, label[language == "nl"][0].value),
       "link": link[0]{
         _type,

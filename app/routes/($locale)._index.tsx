@@ -24,7 +24,12 @@ import {
   InstagramCards,
   type InstagramCardsData,
 } from '~/components/InstagramCards';
-import {urlFor} from '~/lib/sanityImage';
+import {
+  sanityImageConfig,
+  sanityImageProps,
+  urlFor,
+  type SanityImageConfig,
+} from '~/lib/sanityImage';
 import {sanityLanguage} from '~/lib/i18n';
 import {
   hydrateProductsByGid,
@@ -33,6 +38,7 @@ import {
   resolveLinkUrl,
   uniqueStrings,
   type SanityFeaturedProductSelection,
+  type SanityLinkRaw,
 } from '~/lib/sanityModules';
 import {
   resolveReviews,
@@ -84,6 +90,8 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context}: Route.LoaderArgs) {
+  const config = sanityImageConfig(context.env);
+
   const [{collections}, sanityHome] = await Promise.all([
     context.storefront.query(FEATURED_COLLECTION_QUERY),
     // Add other queries here, so that they are loaded in parallel
@@ -95,6 +103,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const collectionGrid = await loadCollectionGrid(
     context,
     sanityHome?.collectionGrid?.cards ?? [],
+    config,
   );
 
   const featuredProducts = await loadFeaturedProducts(
@@ -105,9 +114,13 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
   const shopTheLook = await loadShopTheLook(
     context,
     sanityHome?.shopTheLook ?? null,
+    config,
   );
 
-  const dualCardBanner = resolveDualCardBanner(sanityHome?.dualCardBanner?.cards ?? []);
+  const dualCardBanner = resolveDualCardBanner(
+    sanityHome?.dualCardBanner?.cards ?? [],
+    config,
+  );
 
   const reviews = resolveReviews(
     sanityHome?.reviews ?? null,
@@ -116,7 +129,11 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
 
   const instagramCards = resolveInstagramCards(
     (sanityHome?.instagramCards as SanityInstagramCardsRaw) ?? null,
+    config,
   );
+
+  const hero = resolveHeroBanner(sanityHome?.hero ?? null, config);
+  const promo = resolveHeroBanner(sanityHome?.promoBanner ?? null, config);
 
   return {
     collectionGrid,
@@ -129,6 +146,8 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
     dualCardBanner,
     reviews,
     instagramCards,
+    hero,
+    promo,
     sanityHome,
   };
 }
@@ -136,6 +155,7 @@ async function loadCriticalData({context}: Route.LoaderArgs) {
 async function loadCollectionGrid(
   context: Route.LoaderArgs['context'],
   selections: SanityCollectionGridSelection[],
+  config: SanityImageConfig,
 ): Promise<CollectionGridItem[]> {
   const collectionIds = uniqueStrings(
     selections.map((selection) => selection.collectionId),
@@ -160,7 +180,7 @@ async function loadCollectionGrid(
 
   return selections
     .map((selection) =>
-      resolveCollectionGridItem(selection, collectionsById),
+      resolveCollectionGridItem(selection, collectionsById, config),
     )
     .filter((collection): collection is CollectionGridItem =>
       Boolean(collection),
@@ -168,6 +188,7 @@ async function loadCollectionGrid(
 }
 
 type SanityInstagramCardRaw = {
+  _key?: string;
   image?: {
     asset?: {
       url?: string | null;
@@ -189,6 +210,7 @@ type SanityInstagramCardsRaw = {
 type SanityShopTheLookRaw = {
   heading?: string | null;
   looks?: Array<{
+    _key?: string;
     image?: object | null;
     products?: SanityFeaturedProductSelection[] | null;
   }> | null;
@@ -197,6 +219,7 @@ type SanityShopTheLookRaw = {
 async function loadShopTheLook(
   context: Route.LoaderArgs['context'],
   raw: SanityShopTheLookRaw,
+  config: SanityImageConfig,
 ): Promise<ShopTheLookData | null> {
   if (!raw?.looks?.length) return null;
 
@@ -210,7 +233,14 @@ async function loadShopTheLook(
 
   const looks = raw.looks
     .map((look) => ({
-      image: look.image ?? {},
+      key: look._key,
+      // Bound to 1200px — the original had no width at all, so it served
+      // the raw upload straight into a scroll-snap slider.
+      image: look.image
+        ? sanityImageProps(look.image as Parameters<typeof urlFor>[0], config, {
+            width: 1200,
+          })
+        : {src: '', srcSet: ''},
       products: (look.products ?? [])
         .map((sel) => resolveFeaturedProductItem(sel, productsById))
         .filter((p): p is FeaturedProductItem => Boolean(p)),
@@ -243,24 +273,28 @@ async function loadFeaturedProducts(
     .filter((p): p is FeaturedProductItem => Boolean(p));
 }
 
-function resolveInstagramCards(raw: SanityInstagramCardsRaw): InstagramCardsData | null {
+function resolveInstagramCards(
+  raw: SanityInstagramCardsRaw,
+  config: SanityImageConfig,
+): InstagramCardsData | null {
   if (!raw?.cards?.length) return null;
 
   const cards = raw.cards
     .filter((card) => card.image?.asset?.url && card.handle && card.username)
-    .map((card) => ({
-      image: {
-        url: urlFor(card.image as Parameters<typeof urlFor>[0])
-          .width(800)
-          .height(1000)
-          .auto('format')
-          .fit('crop')
-          .url(),
-      },
-      username: card.username!,
-      title: card.title ?? '',
-      handle: card.handle!,
-    }))
+    .map((card) => {
+      const {src, srcSet} = sanityImageProps(
+        card.image as Parameters<typeof urlFor>[0],
+        config,
+        {width: 800, height: 1000},
+      );
+      return {
+        key: card._key,
+        image: {url: src, srcSet},
+        username: card.username!,
+        title: card.title ?? '',
+        handle: card.handle!,
+      };
+    })
     .filter((card) => Boolean(card.image.url));
 
   if (!cards.length) return null;
@@ -273,32 +307,73 @@ function resolveInstagramCards(raw: SanityInstagramCardsRaw): InstagramCardsData
   };
 }
 
+type SanityHeroRaw = {
+  title?: string | null;
+  description?: string | null;
+  button_text?: string | null;
+  link?: SanityLinkRaw[] | null;
+  imageDesktop?: object | null;
+  imageMobile?: object | null;
+} | null;
+
+type ResolvedHeroBanner = {
+  title: string;
+  description: string | null;
+  buttonText: string;
+  linkUrl: string;
+  desktopImage: {src: string; srcSet: string};
+  mobileImage: {src: string; srcSet: string} | null;
+} | null;
+
+/**
+ * Bouwt hero-/promo-afbeeldingen server-side (begrensd op een echte breedte +
+ * srcSet) in plaats van dit tijdens render in de browser te doen — voorheen
+ * riep `Homepage()` `urlFor` rechtstreeks aan zonder breedtelimiet.
+ */
+function resolveHeroBanner(
+  raw: SanityHeroRaw,
+  config: SanityImageConfig,
+): ResolvedHeroBanner {
+  if (!raw?.imageDesktop || !raw.title) return null;
+
+  const desktopImage = sanityImageProps(
+    raw.imageDesktop as Parameters<typeof urlFor>[0],
+    config,
+    {width: 2000},
+  );
+  if (!desktopImage.src) return null;
+
+  const mobileImage = raw.imageMobile
+    ? sanityImageProps(raw.imageMobile as Parameters<typeof urlFor>[0], config, {
+        width: 900,
+      })
+    : null;
+
+  return {
+    title: raw.title,
+    description: raw.description ?? null,
+    buttonText: raw.button_text ?? 'Shop now',
+    linkUrl: resolveLinkUrl(raw.link?.[0]),
+    desktopImage,
+    mobileImage,
+  };
+}
+
 export default function Homepage() {
   const data = useLoaderData<typeof loader>();
-
-  const hero = data.sanityHome?.hero;
-  const desktopData = hero?.imageDesktop;
-  const mobileData = hero?.imageMobile;
-  const desktopImage = desktopData ? urlFor(desktopData).auto('format').fit('crop').url() : null;
-  const mobileImage = mobileData ? urlFor(mobileData).auto('format').fit('crop').url() : null;
-  const heroLinkUrl = resolveLinkUrl(hero?.link?.[0]);
-
-  const promo = data.sanityHome?.promoBanner;
-  const promoDesktopData = promo?.imageDesktop;
-  const promoMobileData = promo?.imageMobile;
-  const promoDesktopImage = promoDesktopData ? urlFor(promoDesktopData).auto('format').fit('crop').url() : null;
-  const promoMobileImage = promoMobileData ? urlFor(promoMobileData).auto('format').fit('crop').url() : null;
-  const promoLinkUrl = resolveLinkUrl(promo?.link?.[0]);
+  const {hero, promo} = data;
 
   return (
     <div className="home">
-      {hero && desktopImage ? (
+      {hero ? (
         <HeroBanner
-          imageUrl={desktopImage}
-          mobileImageUrl={mobileImage ?? desktopImage}
+          imageUrl={hero.desktopImage.src}
+          imageSrcSet={hero.desktopImage.srcSet}
+          mobileImageUrl={hero.mobileImage?.src ?? hero.desktopImage.src}
+          mobileImageSrcSet={hero.mobileImage?.srcSet}
           title={hero.title}
-          description={hero.description}
-          link={{text: hero.button_text ?? 'Shop now', url: heroLinkUrl}}
+          description={hero.description ?? undefined}
+          link={{text: hero.buttonText, url: hero.linkUrl}}
         />
       ) : (
         <FeaturedCollection collection={data.featuredCollection} />
@@ -310,13 +385,15 @@ export default function Homepage() {
         viewAllLabel={data.featuredViewAllLabel}
         viewAllUrl={data.featuredViewAllUrl}
       />
-      {promo && promoDesktopImage ? (
+      {promo ? (
         <HeroBanner
-          imageUrl={promoDesktopImage}
-          mobileImageUrl={promoMobileImage ?? promoDesktopImage}
+          imageUrl={promo.desktopImage.src}
+          imageSrcSet={promo.desktopImage.srcSet}
+          mobileImageUrl={promo.mobileImage?.src ?? promo.desktopImage.src}
+          mobileImageSrcSet={promo.mobileImage?.srcSet}
           title={promo.title}
-          description={promo.description}
-          link={{text: promo.button_text ?? 'Shop now', url: promoLinkUrl}}
+          description={promo.description ?? undefined}
+          link={{text: promo.buttonText, url: promo.linkUrl}}
           buttonVariant="filled"
           minHeightClassName="min-h-[500px] lg:min-h-[640px]"
           headingLevel="h2"
@@ -419,18 +496,18 @@ function isShopifyCollectionNode(
 function resolveCollectionGridItem(
   selection: SanityCollectionGridSelection,
   collectionsById: Map<string, ShopifyCollectionNode>,
+  config: SanityImageConfig,
 ): CollectionGridItem | null {
   if (!selection.collectionId || !selection.image) return null;
 
   const collection = collectionsById.get(selection.collectionId);
   if (!collection) return null;
 
-  const imageUrl = urlFor(selection.image as Parameters<typeof urlFor>[0])
-    .width(1000)
-    .height(1250)
-    .auto('format')
-    .fit('crop')
-    .url();
+  const {src: imageUrl, srcSet} = sanityImageProps(
+    selection.image as Parameters<typeof urlFor>[0],
+    config,
+    {width: 1000, height: 1250},
+  );
   if (!imageUrl) return null;
 
   const title = selection.title || collection.title || selection.fallbackTitle;
@@ -443,6 +520,7 @@ function resolveCollectionGridItem(
     handle,
     image: {
       url: imageUrl,
+      srcSet,
       altText: title,
       width: 1000,
       height: 1250,
@@ -529,6 +607,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
   shopTheLook{
     "heading": coalesce(heading[language == $language][0].value, heading[language == "nl"][0].value),
     "looks": looks[]{
+      _key,
       image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
       "products": products[]->{
         "productId": store.gid,
@@ -539,6 +618,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
   },
   dualCardBanner{
     cards[]{
+      _key,
       image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
       "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),
       "subtitle": coalesce(subtitle[language == $language][0].value, subtitle[language == "nl"][0].value),
@@ -586,6 +666,7 @@ const HOME_PAGE_QUERY = `*[_type == "home"][0]{
     instagramHandle,
     instagramUrl,
     "cards": cards[]{
+      _key,
       image{ asset->{_id, url, metadata{dimensions}}, hotspot, crop },
       username,
       "handle": product->store.slug.current,
