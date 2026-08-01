@@ -35,7 +35,7 @@ export function HeroBanner({
   description,
   link,
   buttonVariant = 'link',
-  minHeightClassName = 'min-h-[80vh]',
+  minHeightClassName = 'min-h-[70vh]',
   headingLevel = 'h1',
   markAsHero = true,
 }: HeroBannerProps) {
