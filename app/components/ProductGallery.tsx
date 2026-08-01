@@ -50,7 +50,9 @@ export function ProductGallery({
       <div className="pdp-gallery__main">
         <Image
           alt={activeImage.altText || productTitle}
+          aspectRatio="4/5"
           data={activeImage}
+          fetchPriority="high"
           key={activeImage.id ?? activeImage.url}
           loading="eager"
           sizes="(min-width: 48em) 55vw, 100vw"
@@ -72,8 +74,9 @@ export function ProductGallery({
               >
                 <Image
                   alt={image.altText || productTitle}
+                  aspectRatio="4/5"
                   data={image}
-                  loading={index < 6 ? 'eager' : 'lazy'}
+                  loading="lazy"
                   sizes="80px"
                 />
               </button>
@@ -86,9 +89,11 @@ export function ProductGallery({
           <div className="pdp-gallery__slide" key={image.id ?? image.url}>
             <Image
               alt={image.altText || productTitle}
+              aspectRatio="4/5"
               data={image}
+              fetchPriority={index === 0 ? 'high' : undefined}
               loading={index === 0 ? 'eager' : 'lazy'}
-              sizes="100vw"
+              sizes="(min-width: 48em) 55vw, 100vw"
             />
           </div>
         ))}
