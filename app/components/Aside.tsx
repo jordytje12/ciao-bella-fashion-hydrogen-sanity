@@ -1,8 +1,10 @@
 import {
   createContext,
   type ReactNode,
+  useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -44,6 +46,8 @@ export function Aside({
   const id = useId();
   const panelRef = useRef<HTMLElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
+  const closeRef = useRef(close);
+  closeRef.current = close;
 
   useEffect(() => {
     if (!expanded) return;
@@ -63,7 +67,7 @@ export function Aside({
       'keydown',
       (event: KeyboardEvent) => {
         if (event.key === 'Escape') {
-          close();
+          closeRef.current();
           return;
         }
 
@@ -93,7 +97,7 @@ export function Aside({
       // Give focus back to whatever opened this panel (e.g. the cart icon).
       triggerRef.current?.focus?.();
     };
-  }, [close, expanded]);
+  }, [expanded]);
 
   return (
     <div
@@ -128,17 +132,12 @@ const AsideContext = createContext<AsideContextValue | null>(null);
 
 Aside.Provider = function AsideProvider({children}: {children: ReactNode}) {
   const [type, setType] = useState<AsideType>('closed');
+  const open = useCallback((mode: AsideType) => setType(mode), []);
+  const close = useCallback(() => setType('closed'), []);
+  const value = useMemo(() => ({type, open, close}), [type, open, close]);
 
   return (
-    <AsideContext.Provider
-      value={{
-        type,
-        open: setType,
-        close: () => setType('closed'),
-      }}
-    >
-      {children}
-    </AsideContext.Provider>
+    <AsideContext.Provider value={value}>{children}</AsideContext.Provider>
   );
 };
 
