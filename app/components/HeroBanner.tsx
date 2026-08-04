@@ -8,10 +8,11 @@ type HeroBannerProps = {
   imageAlt?: string;
   title: string;
   description?: string;
-  link: {
+  /** Optioneel: zonder text/url wordt geen knop getoond */
+  link?: {
     text: string;
     url: string;
-  };
+  } | null;
   /** 'link' = onderstreepte tekstlink (default, hero-stijl); 'filled' = terracotta knop */
   buttonVariant?: 'link' | 'filled';
   /** Tailwind-klasse(n) voor de minimale hoogte van de content-wrapper. Default: 'min-h-[80vh]' */
@@ -82,23 +83,25 @@ export function HeroBanner({
           </p>
         ) : null}
 
-        <div className="pt-2">
-          {buttonVariant === 'filled' ? (
-            <Link
-              className="inline-flex w-fit items-center bg-terracotta px-6 py-3 font-body text-[18px] font-normal leading-[normal] text-white underline hover:underline"
-              to={link.url}
-            >
-              {link.text}
-            </Link>
-          ) : (
-            <Link
-              className="font-body text-[18px] font-normal leading-[normal] text-white underline hover:underline"
-              to={link.url}
-            >
-              {link.text}
-            </Link>
-          )}
-        </div>
+        {link?.text && link?.url ? (
+          <div className="pt-2">
+            {buttonVariant === 'filled' ? (
+              <Link
+                className="inline-flex w-fit items-center bg-terracotta px-6 py-3 font-body text-[18px] font-normal leading-[normal] text-white underline hover:underline"
+                to={link.url}
+              >
+                {link.text}
+              </Link>
+            ) : (
+              <Link
+                className="font-body text-[18px] font-normal leading-[normal] text-white underline hover:underline"
+                to={link.url}
+              >
+                {link.text}
+              </Link>
+            )}
+          </div>
+        ) : null}
       </div>
     </section>
   );

@@ -1,9 +1,8 @@
-import {redirect, useLoaderData} from 'react-router';
-import type {Route} from './+types/($locale).collections.$handle';
+import {data, redirect, useLoaderData} from 'react-router';
+import type {Route} from './+types/($locale).collections.vip-sale';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
 import {PortableText, type PortableTextBlock} from '@portabletext/react';
 import {PaginatedResourceSection} from '~/components/PaginatedResourceSection';
-import {redirectIfHandleIsLocalized} from '~/lib/redirect';
 import {ProductCard} from '~/components/ProductCard';
 import {Aside, useAside} from '~/components/Aside';
 import {
@@ -14,16 +13,15 @@ import {
 } from '~/components/CollectionFilters';
 import {
   getCollectionSortVariables,
-  isFilteredOrSorted,
   parseFiltersFromSearchParams,
 } from '~/lib/collectionFilters';
-import {getSeoMeta, breadcrumbJsonLd, canonicalUrl, rootSeo} from '~/lib/seo';
+import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 import {CollectionModules} from '~/components/CollectionModules';
 import {HeroBanner} from '~/components/HeroBanner';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {sanityImageConfig} from '~/lib/sanityImage';
-import {sanityLanguage} from '~/lib/i18n';
+import {getLocaleFromRequest, sanityLanguage} from '~/lib/i18n';
 import {
   resolveContentModules,
   resolveHeroBanner,
@@ -31,82 +29,77 @@ import {
   type SanityContentModuleRaw,
   type SanityHeroRaw,
 } from '~/lib/sanityModules';
+import {
+  isVipCustomer,
+  SALE_COLLECTION_PATH,
+  VIP_SALE_HANDLE,
+} from '~/lib/vip';
 
-export const meta: Route.MetaFunction = ({data, matches, location}) => {
+export const meta: Route.MetaFunction = ({data: loaderData, matches, location}) => {
   const {origin, seo} = rootSeo(matches);
   const url = canonicalUrl(origin, location.pathname);
 
   const title =
-    data?.sanitySeo?.title ??
-    data?.collection.seo?.title ??
-    data?.collection.title ??
-    '';
+    loaderData?.sanitySeo?.title ??
+    loaderData?.collection.seo?.title ??
+    loaderData?.collection.title ??
+    'VIP Sale';
   const description =
-    data?.sanitySeo?.description ??
-    data?.collection.seo?.description ??
-    data?.collection.description ??
+    loaderData?.sanitySeo?.description ??
+    loaderData?.collection.seo?.description ??
+    loaderData?.collection.description ??
     '';
 
   return getSeoMeta(seo, {
     title,
     description,
     url,
-    robots: isFilteredOrSorted(location.search) ? {noIndex: true} : undefined,
-    jsonLd: data?.collection
-      ? breadcrumbJsonLd([
-          {name: 'Home', url: origin || undefined},
-          {name: data.collection.title, url},
-        ])
-      : undefined,
+    robots: {noIndex: true},
   });
 };
 
-export async function loader(args: Route.LoaderArgs) {
-  // Await the critical data required to render initial state of the page
-  const criticalData = await loadCriticalData(args);
+export async function loader({context, request}: Route.LoaderArgs) {
+  const {customerAccount, storefront} = context;
 
-  return {...criticalData};
-}
+  // Not logged in → redirect to login with return_to back here
+  await customerAccount.handleAuthStatus();
 
-/**
- * Load data necessary for rendering content above the fold. This is the critical data
- * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
- */
-async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
-  const {handle} = params;
-  const {storefront} = context;
+  const vip = await isVipCustomer(customerAccount);
+  if (!vip) {
+    const {pathPrefix} = getLocaleFromRequest(request);
+    throw redirect(`${pathPrefix}${SALE_COLLECTION_PATH}`);
+  }
+
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,
   });
-
-  if (!handle) {
-    throw redirect('/collections');
-  }
-
   const {searchParams} = new URL(request.url);
   const filters = parseFiltersFromSearchParams(searchParams);
   const {sortKey, reverse} = getCollectionSortVariables(searchParams);
 
   const [{collection}, sanityCollection] = await Promise.all([
-    storefront.query(COLLECTION_QUERY, {
-      variables: {handle, filters, sortKey, reverse, ...paginationVariables},
+    storefront.query(VIP_SALE_COLLECTION_QUERY, {
+      variables: {
+        handle: VIP_SALE_HANDLE,
+        filters,
+        sortKey,
+        reverse,
+        ...paginationVariables,
+      },
     }),
     context.sanity
-      .fetch(SANITY_COLLECTION_QUERY, {
-        handle,
+      .fetch(SANITY_VIP_SALE_COLLECTION_QUERY, {
+        handle: VIP_SALE_HANDLE,
         language: sanityLanguage(context.storefront.i18n.language),
       })
       .catch(() => null) as Promise<SanityCollectionPageRaw | null>,
   ]);
 
   if (!collection) {
-    throw new Response(`Collection ${handle} not found`, {
+    throw new Response(`Collection ${VIP_SALE_HANDLE} not found`, {
       status: 404,
     });
   }
-
-  // The API handle might be localized, so redirect to the localized handle
-  redirectIfHandleIsLocalized(request, {handle, data: collection});
 
   const config = sanityImageConfig(context.env);
   const modules = await resolveContentModules(
@@ -118,13 +111,20 @@ async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
     ? resolveHeroBanner(sanityCollection.hero ?? null, config)
     : null;
 
-  return {
-    collection,
-    hero,
-    sanityIntro: sanityCollection?.intro ?? null,
-    modules,
-    sanitySeo: sanityCollection?.seo ?? null,
-  };
+  return data(
+    {
+      collection,
+      hero,
+      sanityIntro: sanityCollection?.intro ?? null,
+      modules,
+      sanitySeo: sanityCollection?.seo ?? null,
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+      },
+    },
+  );
 }
 
 type SanityCollectionPageRaw = {
@@ -135,7 +135,7 @@ type SanityCollectionPageRaw = {
   seo?: {title?: string | null; description?: string | null} | null;
 };
 
-export default function Collection() {
+export default function VipSaleCollection() {
   const {collection, hero, sanityIntro, modules} =
     useLoaderData<typeof loader>();
   const {open} = useAside();
@@ -256,11 +256,11 @@ export default function Collection() {
 }
 
 const PRODUCT_ITEM_FRAGMENT = `#graphql
-  fragment MoneyProductItem on MoneyV2 {
+  fragment MoneyVipSaleProductItem on MoneyV2 {
     amount
     currencyCode
   }
-  fragment ProductItem on Product {
+  fragment VipSaleProductItem on Product {
     id
     handle
     title
@@ -273,24 +273,23 @@ const PRODUCT_ITEM_FRAGMENT = `#graphql
     }
     priceRange {
       minVariantPrice {
-        ...MoneyProductItem
+        ...MoneyVipSaleProductItem
       }
       maxVariantPrice {
-        ...MoneyProductItem
+        ...MoneyVipSaleProductItem
       }
     }
     compareAtPriceRange {
       minVariantPrice {
-        ...MoneyProductItem
+        ...MoneyVipSaleProductItem
       }
     }
   }
 ` as const;
 
-// NOTE: https://shopify.dev/docs/api/storefront/2022-04/objects/collection
-const COLLECTION_QUERY = `#graphql
+const VIP_SALE_COLLECTION_QUERY = `#graphql
   ${PRODUCT_ITEM_FRAGMENT}
-  query Collection(
+  query VipSaleCollection(
     $handle: String!
     $country: CountryCode
     $language: LanguageCode
@@ -332,7 +331,7 @@ const COLLECTION_QUERY = `#graphql
           }
         }
         nodes {
-          ...ProductItem
+          ...VipSaleProductItem
         }
         pageInfo {
           hasPreviousPage
@@ -345,7 +344,7 @@ const COLLECTION_QUERY = `#graphql
   }
 ` as const;
 
-const SANITY_COLLECTION_QUERY = `*[_type == "collection" && store.slug.current == $handle && !(_id in path("drafts.**"))][0]{
+const SANITY_VIP_SALE_COLLECTION_QUERY = `*[_type == "collection" && store.slug.current == $handle && !(_id in path("drafts.**"))][0]{
   showHero,
   hero{
     "title": coalesce(title[language == $language][0].value, title[language == "nl"][0].value),

@@ -2,6 +2,7 @@ import {describe, expect, it} from 'vitest';
 import {
   resolveDualCardBanner,
   resolveFeaturedProductItem,
+  resolveHeroBanner,
   uniqueStrings,
   type ShopifyProductNode,
 } from './sanityModules';
@@ -100,5 +101,55 @@ describe('resolveDualCardBanner', () => {
     expect(card.url).toBe('/collections/zomer');
     expect(card.image.url).toContain('w=1200');
     expect(card.image.srcSet).toContain('w=1200');
+  });
+});
+
+describe('resolveHeroBanner', () => {
+  const imageDesktop = {
+    asset: {
+      url: 'https://cdn.sanity.io/images/abc123/production/hero-2000x1200.jpg',
+    },
+  };
+
+  it('returns null without a desktop image or title', () => {
+    expect(resolveHeroBanner({title: 'Sale'}, CONFIG)).toBeNull();
+    expect(resolveHeroBanner({imageDesktop}, CONFIG)).toBeNull();
+  });
+
+  it('resolves a hero with desktop image and title, without inventing a CTA', () => {
+    const result = resolveHeroBanner(
+      {
+        title: 'Sale',
+        description: 'Tot 50% korting',
+        imageDesktop,
+      },
+      CONFIG,
+    );
+
+    expect(result).toMatchObject({
+      title: 'Sale',
+      description: 'Tot 50% korting',
+      buttonText: null,
+      linkUrl: null,
+    });
+    expect(result?.desktopImage.src).toContain('w=2000');
+    expect(result?.mobileImage).toBeNull();
+  });
+
+  it('includes a CTA only when button text and link are both set', () => {
+    const result = resolveHeroBanner(
+      {
+        title: 'Sale',
+        button_text: 'Shop de sale',
+        imageDesktop,
+        link: [{_type: 'linkExternal', url: '/collections/sale'}],
+      },
+      CONFIG,
+    );
+
+    expect(result).toMatchObject({
+      buttonText: 'Shop de sale',
+      linkUrl: '/collections/sale',
+    });
   });
 });

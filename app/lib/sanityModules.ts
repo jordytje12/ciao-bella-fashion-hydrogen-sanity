@@ -126,6 +126,66 @@ export function resolveDualCardBanner(
   return result;
 }
 
+export type SanityHeroRaw = {
+  title?: string | null;
+  description?: string | null;
+  button_text?: string | null;
+  link?: SanityLinkRaw[] | null;
+  imageDesktop?: {
+    asset?: {url?: string | null} | null;
+  } | null;
+  imageMobile?: {
+    asset?: {url?: string | null} | null;
+  } | null;
+} | null;
+
+export type ResolvedHeroBanner = {
+  title: string;
+  description: string | null;
+  buttonText: string | null;
+  linkUrl: string | null;
+  desktopImage: {src: string; srcSet: string};
+  mobileImage: {src: string; srcSet: string} | null;
+} | null;
+
+/**
+ * Bouwt een page/collection hero server-side (begrensde breedte + srcSet).
+ * Vereist desktop image + title; anders null.
+ * CTA alleen als button_text én een link zijn ingevuld — geen "Shop now"-fallback.
+ */
+export function resolveHeroBanner(
+  raw: SanityHeroRaw,
+  config: SanityImageConfig,
+): ResolvedHeroBanner {
+  if (!raw?.imageDesktop?.asset?.url || !raw.title) return null;
+
+  const desktopImage = sanityImageProps(
+    raw.imageDesktop as Parameters<typeof urlFor>[0],
+    config,
+    {width: 2000},
+  );
+  if (!desktopImage.src) return null;
+
+  const mobileImage = raw.imageMobile?.asset?.url
+    ? sanityImageProps(raw.imageMobile as Parameters<typeof urlFor>[0], config, {
+        width: 900,
+      })
+    : null;
+
+  const buttonText = raw.button_text?.trim() || null;
+  const linkRaw = raw.link?.[0];
+  const linkUrl = buttonText && linkRaw ? resolveLinkUrl(linkRaw) : null;
+
+  return {
+    title: raw.title,
+    description: raw.description ?? null,
+    buttonText: linkUrl ? buttonText : null,
+    linkUrl,
+    desktopImage,
+    mobileImage,
+  };
+}
+
 /**
  * Haalt Shopify-productdata op voor een lijst GIDs (uit Sanity-referenties)
  * en geeft een Map terug zodat de Sanity-volgorde behouden kan blijven.

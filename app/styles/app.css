@@ -1965,6 +1965,16 @@ button.reset:hover:not(:has(> *)) {
   width: 100%;
 }
 
+.collection-page__hero {
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 64em) {
+  .collection-page__hero {
+    margin-bottom: 3rem;
+  }
+}
+
 .collection-page__header {
   margin: 0 auto;
   max-width: 720px;
