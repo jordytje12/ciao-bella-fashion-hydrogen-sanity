@@ -16,6 +16,10 @@ export function ProductCard({
 }) {
   const variantUrl = useVariantUrl(product.handle);
   const image = product.featuredImage;
+  const price = product.priceRange.minVariantPrice;
+  const compareAtPrice = product.compareAtPriceRange?.minVariantPrice;
+  const isOnSale =
+    compareAtPrice && Number(compareAtPrice.amount) > Number(price.amount);
 
   return (
     <Link
@@ -36,7 +40,16 @@ export function ProductCard({
       </div>
       <span className="collection-product-card__title">{product.title}</span>
       <span className="collection-product-card__price">
-        <Money data={product.priceRange.minVariantPrice} />
+        {isOnSale ? (
+          <span className="product-price-on-sale">
+            <Money data={price} />
+            <s>
+              <Money data={compareAtPrice} />
+            </s>
+          </span>
+        ) : (
+          <Money data={price} />
+        )}
       </span>
     </Link>
   );
