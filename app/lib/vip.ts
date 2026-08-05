@@ -8,6 +8,7 @@ const VIP_TAGS_LOWER = new Set(VIP_TAGS.map((tag) => tag.toLowerCase()));
 
 export const VIP_SALE_HANDLE = 'vip-sale';
 export const SALE_COLLECTION_PATH = '/collections/sale';
+export const VIP_SALE_PATH = '/collections/vip-sale';
 
 const CUSTOMER_TAGS_QUERY = `#graphql
   query CustomerTags {

@@ -18,6 +18,7 @@ import {
 import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 import {CollectionModules} from '~/components/CollectionModules';
 import {HeroBanner} from '~/components/HeroBanner';
+import {VipSaleGate} from '~/components/VipSaleGate';
 import {portableTextComponents} from '~/components/PortableTextComponents';
 import type {ProductItemFragment} from 'storefrontapi.generated';
 import {sanityImageConfig} from '~/lib/sanityImage';
@@ -33,21 +34,23 @@ import {
   isVipCustomer,
   SALE_COLLECTION_PATH,
   VIP_SALE_HANDLE,
+  VIP_SALE_PATH,
 } from '~/lib/vip';
 
 export const meta: Route.MetaFunction = ({data: loaderData, matches, location}) => {
   const {origin, seo} = rootSeo(matches);
   const url = canonicalUrl(origin, location.pathname);
 
+  const vipData = loaderData?.state === 'vip' ? loaderData : null;
   const title =
-    loaderData?.sanitySeo?.title ??
-    loaderData?.collection.seo?.title ??
-    loaderData?.collection.title ??
+    vipData?.sanitySeo?.title ??
+    vipData?.collection.seo?.title ??
+    vipData?.collection.title ??
     'VIP Sale';
   const description =
-    loaderData?.sanitySeo?.description ??
-    loaderData?.collection.seo?.description ??
-    loaderData?.collection.description ??
+    vipData?.sanitySeo?.description ??
+    vipData?.collection.seo?.description ??
+    vipData?.collection.description ??
     '';
 
   return getSeoMeta(seo, {
@@ -60,13 +63,25 @@ export const meta: Route.MetaFunction = ({data: loaderData, matches, location}) 
 
 export async function loader({context, request}: Route.LoaderArgs) {
   const {customerAccount, storefront} = context;
+  const {pathPrefix} = getLocaleFromRequest(request);
 
-  // Not logged in → redirect to login with return_to back here
-  await customerAccount.handleAuthStatus();
+  // Not logged in → render an explainer with a login CTA (no redirect).
+  const loggedIn = await customerAccount.isLoggedIn();
+  if (!loggedIn) {
+    const returnTo = `${pathPrefix}${VIP_SALE_PATH}`;
+    const loginUrl = `${pathPrefix}/account/login?return_to=${encodeURIComponent(returnTo)}`;
+    return data(
+      {state: 'anonymous' as const, loginUrl},
+      {
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+        },
+      },
+    );
+  }
 
   const vip = await isVipCustomer(customerAccount);
   if (!vip) {
-    const {pathPrefix} = getLocaleFromRequest(request);
     throw redirect(`${pathPrefix}${SALE_COLLECTION_PATH}`);
   }
 
@@ -113,6 +128,7 @@ export async function loader({context, request}: Route.LoaderArgs) {
 
   return data(
     {
+      state: 'vip' as const,
       collection,
       hero,
       sanityIntro: sanityCollection?.intro ?? null,
@@ -136,9 +152,14 @@ type SanityCollectionPageRaw = {
 };
 
 export default function VipSaleCollection() {
-  const {collection, hero, sanityIntro, modules} =
-    useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
   const {open} = useAside();
+
+  if (loaderData.state === 'anonymous') {
+    return <VipSaleGate loginUrl={loaderData.loginUrl} />;
+  }
+
+  const {collection, hero, sanityIntro, modules} = loaderData;
 
   const filters = (collection.products.filters ?? []) as CollectionFilter[];
   const hasProducts = collection.products.nodes.length > 0;
@@ -183,6 +204,14 @@ export default function VipSaleCollection() {
           {intro}
         </header>
       )}
+
+      <p
+        role="note"
+        className="mx-5 mb-4 border border-terracotta/40 bg-terracotta/5 px-4 py-3 text-center font-body text-sm text-black md:mx-12.5"
+      >
+        Als VIP krijg je bovenop deze sale-prijzen nog eens extra korting op
+        je hele bestelling — automatisch verrekend bij het afrekenen.
+      </p>
 
       {filters.length > 0 && (
         <div className="flex flex-col gap-3 px-5 pb-4 md:px-12.5">
