@@ -8,6 +8,7 @@ import {
   getCatalogSortVariables,
   isFilteredOrSorted,
 } from '~/lib/collectionFilters';
+import {redirectDocumentRequestAwayFromPaginationCursor} from '~/lib/pagination';
 import type {CollectionItemFragment} from 'storefrontapi.generated';
 import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 
@@ -35,6 +36,8 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context, request}: Route.LoaderArgs) {
+  redirectDocumentRequestAwayFromPaginationCursor(request);
+
   const {storefront} = context;
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,

@@ -17,6 +17,7 @@ import {
   isFilteredOrSorted,
   parseFiltersFromSearchParams,
 } from '~/lib/collectionFilters';
+import {redirectDocumentRequestAwayFromPaginationCursor} from '~/lib/pagination';
 import {getSeoMeta, breadcrumbJsonLd, canonicalUrl, rootSeo} from '~/lib/seo';
 import {CollectionModules} from '~/components/CollectionModules';
 import {HeroBanner} from '~/components/HeroBanner';
@@ -73,6 +74,8 @@ export async function loader(args: Route.LoaderArgs) {
  * needed to render the page. If it's unavailable, the whole page should 400 or 500 error.
  */
 async function loadCriticalData({context, params, request}: Route.LoaderArgs) {
+  redirectDocumentRequestAwayFromPaginationCursor(request);
+
   const {handle} = params;
   const {storefront} = context;
   const paginationVariables = getPaginationVariables(request, {

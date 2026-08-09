@@ -3,6 +3,7 @@ import type {
   ProductCollectionSortKeys,
   ProductSortKeys,
 } from '@shopify/hydrogen/storefront-api-types';
+import {PAGINATION_PARAMS} from '~/lib/pagination';
 
 /**
  * URL-conventie (Hydrogen demo-store): elk actief filter staat als search param
@@ -12,9 +13,6 @@ import type {
  */
 export const FILTER_URL_PREFIX = 'filter.';
 export const SORT_URL_PARAM = 'sort_by';
-
-/** Pagination-params van Hydrogen's getPaginationVariables — resetten bij elke filter/sort-wijziging. */
-const PAGINATION_PARAMS = ['cursor', 'direction'];
 
 export type SortSlug =
   | 'featured'

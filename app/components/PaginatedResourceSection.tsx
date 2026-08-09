@@ -38,15 +38,17 @@ export function PaginatedResourceSection<NodesType>({
 
         return (
           <div>
-            <PreviousLink>
-              {isLoading ? (
-                'Loading...'
-              ) : (
-                <span>
-                  <span aria-hidden="true">↑</span> Load previous
-                </span>
-              )}
-            </PreviousLink>
+            {!loadOnScroll && (
+              <PreviousLink>
+                {isLoading ? (
+                  'Loading...'
+                ) : (
+                  <span>
+                    <span aria-hidden="true">↑</span> Load previous
+                  </span>
+                )}
+              </PreviousLink>
+            )}
             {resourcesClassName ? (
               <div
                 aria-label={ariaLabel}

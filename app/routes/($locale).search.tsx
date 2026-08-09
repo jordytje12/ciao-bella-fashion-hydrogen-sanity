@@ -1,6 +1,7 @@
 import {useLoaderData, useRouteLoaderData} from 'react-router';
 import type {Route} from './+types/($locale).search';
 import {getPaginationVariables, Analytics} from '@shopify/hydrogen';
+import {redirectDocumentRequestAwayFromPaginationCursor} from '~/lib/pagination';
 import {getSeoMeta, rootSeo} from '~/lib/seo';
 import {SearchForm} from '~/components/SearchForm';
 import {SearchResults} from '~/components/SearchResults';
@@ -261,6 +262,8 @@ async function regularSearch({
   Route.LoaderArgs,
   'request' | 'context'
 >): Promise<RegularSearchReturn> {
+  redirectDocumentRequestAwayFromPaginationCursor(request);
+
   const {storefront} = context;
   const url = new URL(request.url);
   const variables = getPaginationVariables(request, {pageBy: 8});

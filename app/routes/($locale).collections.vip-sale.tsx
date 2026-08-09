@@ -15,6 +15,7 @@ import {
   getCollectionSortVariables,
   parseFiltersFromSearchParams,
 } from '~/lib/collectionFilters';
+import {redirectDocumentRequestAwayFromPaginationCursor} from '~/lib/pagination';
 import {getSeoMeta, canonicalUrl, rootSeo} from '~/lib/seo';
 import {CollectionModules} from '~/components/CollectionModules';
 import {HeroBanner} from '~/components/HeroBanner';
@@ -84,6 +85,8 @@ export async function loader({context, request}: Route.LoaderArgs) {
   if (!vip) {
     throw redirect(`${pathPrefix}${SALE_COLLECTION_PATH}`);
   }
+
+  redirectDocumentRequestAwayFromPaginationCursor(request);
 
   const paginationVariables = getPaginationVariables(request, {
     pageBy: 8,
