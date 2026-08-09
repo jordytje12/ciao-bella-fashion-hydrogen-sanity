@@ -6,6 +6,8 @@
   --grid-item-width: 355px;
   --header-height: 64px;
   --topbar-height: 40px; /* 18px tekst + 2×20px padding */
+  /* boven alle pagina-inhoud, onder de drawer-overlay (9999) en maat-sheet (9998) */
+  --z-header: 100;
   --color-dark: var(--color-black);
   --color-light: var(--color-white);
 }
@@ -200,7 +202,7 @@ button.reset:hover:not(:has(> *)) {
 */
 .header {
   height: var(--header-height);
-  z-index: 10;
+  z-index: var(--z-header);
   transition: background-color 0.25s ease, color 0.25s ease;
 }
 
@@ -233,7 +235,7 @@ button.reset:hover:not(:has(> *)) {
   left: 0;
   right: 0;
   background: transparent;
-  z-index: 999;
+  z-index: var(--z-header);
 }
 
 .header--home .header-icon-link,

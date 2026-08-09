@@ -48,7 +48,7 @@ export function HeroBanner({
   return (
     <section
       {...(markAsHero ? {'data-hero': true} : {})}
-      className="relative overflow-hidden bg-neutral-950 text-white"
+      className="relative isolate overflow-hidden bg-neutral-950 text-white"
     >
       <picture className="absolute inset-0 h-full w-full">
         {mobileImageUrl ? (
