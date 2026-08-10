@@ -175,6 +175,20 @@ export default function VipSaleCollection() {
     <p className="collection-page__intro">{collection.description}</p>
   ) : null;
 
+  const vipNote = (
+    <div
+      className={`collection-page__vip-note${
+        intro ? '' : ' collection-page__vip-note--standalone'
+      }`}
+    >
+      <span className="collection-page__vip-note-label">VIP-voordeel</span>
+      <p className="collection-page__vip-note-text">
+        Bovenop deze sale-prijzen krijg je extra korting op je hele bestelling,
+        automatisch verrekend bij het afrekenen.
+      </p>
+    </div>
+  );
+
   return (
     <div className="collection-page">
       {hero ? (
@@ -197,24 +211,22 @@ export default function VipSaleCollection() {
               markAsHero
             />
           </div>
-          {intro ? (
-            <header className="collection-page__header">{intro}</header>
-          ) : null}
+          <header
+            className={`collection-page__header${
+              intro ? '' : ' collection-page__header--compact'
+            }`}
+          >
+            {intro}
+            {vipNote}
+          </header>
         </>
       ) : (
         <header className="collection-page__header">
           <h1 className="collection-page__title">{collection.title}</h1>
           {intro}
+          {vipNote}
         </header>
       )}
-
-      <p
-        role="note"
-        className="mx-5 mb-4 border border-terracotta/40 bg-terracotta/5 px-4 py-3 text-center font-body text-sm text-black md:mx-12.5"
-      >
-        Als VIP krijg je bovenop deze sale-prijzen nog eens extra korting op
-        je hele bestelling — automatisch verrekend bij het afrekenen.
-      </p>
 
       {filters.length > 0 && (
         <div className="flex flex-col gap-3 px-5 pb-4 md:px-12.5">
