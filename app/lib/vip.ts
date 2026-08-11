@@ -1,3 +1,5 @@
+import {CUSTOMER_TAGS_QUERY} from '~/graphql/customer-account/CustomerTagsQuery';
+
 export const VIP_TAGS = [
   'VIP_ACTIEF',
   'VIP_SLAPEND',
@@ -9,14 +11,6 @@ const VIP_TAGS_LOWER = new Set(VIP_TAGS.map((tag) => tag.toLowerCase()));
 export const VIP_SALE_HANDLE = 'vip-sale';
 export const SALE_COLLECTION_PATH = '/collections/sale';
 export const VIP_SALE_PATH = '/collections/vip-sale';
-
-const CUSTOMER_TAGS_QUERY = `#graphql
-  query CustomerTags {
-    customer {
-      tags
-    }
-  }
-` as const;
 
 type CustomerTagsResult = {
   data?: {customer?: {tags?: unknown} | null} | null;

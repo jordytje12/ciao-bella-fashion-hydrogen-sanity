@@ -905,7 +905,56 @@ button.reset:hover:not(:has(> *)) {
   font-family: var(--font-body);
   font-size: 14px;
   justify-content: space-between;
+  margin: 0;
+}
+
+.cart-totals {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   margin: 0 0 0.5rem;
+}
+
+.cart-totals > div {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.cart-totals dt {
+  margin: 0;
+}
+
+.cart-totals dd {
+  margin: 0;
+}
+
+.cart-allocation {
+  color: #1C1A18;
+  font-family: var(--font-body);
+  font-size: 13px;
+}
+
+.cart-allocation dd {
+  align-items: baseline;
+  display: inline-flex;
+  font-variant-numeric: tabular-nums;
+  gap: 0.1rem;
+}
+
+.cart-total {
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1C1A18;
+  font-family: var(--font-body);
+  font-size: 14px;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+}
+
+.cart-total dd {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .cart-subtotal dd {

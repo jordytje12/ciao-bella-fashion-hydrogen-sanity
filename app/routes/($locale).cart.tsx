@@ -3,6 +3,7 @@ import type {Route} from './+types/($locale).cart';
 import type {CartQueryDataReturn} from '@shopify/hydrogen';
 import {Analytics, CartForm} from '@shopify/hydrogen';
 import {CartMain} from '~/components/CartMain';
+import {syncCartBuyerIdentity} from '~/lib/cartBuyer';
 import {getSeoMeta, rootSeo} from '~/lib/seo';
 
 export const meta: Route.MetaFunction = ({matches}) => {
@@ -99,8 +100,13 @@ export async function action({request, context}: Route.ActionArgs) {
 }
 
 export async function loader({context}: Route.LoaderArgs) {
-  const {cart} = context;
-  return await cart.get();
+  const {cart, customerAccount} = context;
+  const {cart: syncedCart, headers} = await syncCartBuyerIdentity({
+    cart,
+    customerAccount,
+  });
+
+  return data(syncedCart, {headers});
 }
 
 export default function Cart() {

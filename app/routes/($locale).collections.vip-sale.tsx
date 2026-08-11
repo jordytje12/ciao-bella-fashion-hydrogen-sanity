@@ -184,7 +184,7 @@ export default function VipSaleCollection() {
       <span className="collection-page__vip-note-label">VIP-voordeel</span>
       <p className="collection-page__vip-note-text">
         Bovenop deze sale-prijzen krijg je extra korting op je hele bestelling,
-        automatisch verrekend bij het afrekenen.
+        automatisch zichtbaar in je winkelwagen.
       </p>
     </div>
   );

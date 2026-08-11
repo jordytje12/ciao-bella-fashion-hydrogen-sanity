@@ -23,6 +23,7 @@ import type {Route} from './+types/root';
 import favicon from '~/assets/favicon.svg';
 import cormorantGaramondFont from '~/assets/fonts/cormorant-garamond-latin.woff2?url';
 import dmSansFont from '~/assets/fonts/dm-sans-latin.woff2?url';
+import {syncCartBuyerIdentity} from '~/lib/cartBuyer';
 import {FALLBACK_HEADER_MENU, loadHeaderMenu} from '~/lib/headerMenu';
 import {sanityLanguage, useLocalePrefix} from '~/lib/i18n';
 import type {FooterData} from '~/components/Footer';
@@ -189,7 +190,11 @@ function loadDeferredData({context}: Route.LoaderArgs) {
   const {customerAccount, cart} = context;
 
   return {
-    cart: cart.get(),
+    // Sync buyer identity for existing sessions so VIP automatic discounts apply
+    // to the cart drawer without requiring a fresh login.
+    cart: syncCartBuyerIdentity({cart, customerAccount}).then(
+      ({cart: syncedCart}) => syncedCart,
+    ),
     isLoggedIn: customerAccount.isLoggedIn(),
   };
 }

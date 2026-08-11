@@ -30,15 +30,29 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
         Overzicht
       </h4>
       <CartActionMessages />
-      <dl role="group" className="cart-subtotal">
-        <dt>Subtotaal</dt>
-        <dd>
-          {cart?.cost?.subtotalAmount?.amount ? (
-            <Money data={cart?.cost?.subtotalAmount} />
-          ) : (
-            '-'
-          )}
-        </dd>
+      <dl role="group" className="cart-totals">
+        <div className="cart-subtotal">
+          <dt>Subtotaal</dt>
+          <dd>
+            {cart?.cost?.subtotalAmount?.amount ? (
+              <Money data={cart.cost.subtotalAmount} />
+            ) : (
+              '-'
+            )}
+          </dd>
+        </div>
+        <CartDiscountAllocations
+          discountAllocations={cart?.discountAllocations}
+        />
+        {hasDiscountAllocations(cart?.discountAllocations) &&
+        cart?.cost?.totalAmount?.amount ? (
+          <div className="cart-total">
+            <dt>Totaal</dt>
+            <dd>
+              <Money data={cart.cost.totalAmount} />
+            </dd>
+          </div>
+        ) : null}
       </dl>
       <details className="cart-codes">
         <summary className="cart-codes__summary">
@@ -59,6 +73,53 @@ export function CartSummary({cart, layout}: CartSummaryProps) {
       </details>
       <CartCheckoutActions checkoutUrl={cart?.checkoutUrl} />
     </div>
+  );
+}
+
+function hasDiscountAllocations(
+  discountAllocations?: CartApiQueryFragment['discountAllocations'] | null,
+) {
+  return Boolean(discountAllocations?.length);
+}
+
+function getDiscountLabel(
+  allocation: NonNullable<
+    CartApiQueryFragment['discountAllocations']
+  >[number],
+) {
+  if ('title' in allocation && allocation.title) {
+    return allocation.title;
+  }
+  if ('code' in allocation && allocation.code) {
+    return allocation.code;
+  }
+  return 'Korting';
+}
+
+function CartDiscountAllocations({
+  discountAllocations,
+}: {
+  discountAllocations?: CartApiQueryFragment['discountAllocations'] | null;
+}) {
+  if (!discountAllocations?.length) return null;
+
+  return (
+    <>
+      {discountAllocations.map((allocation, index) => {
+        const label = getDiscountLabel(allocation);
+        const key = `${label}-${allocation.discountedAmount.amount}-${index}`;
+
+        return (
+          <div className="cart-allocation" key={key}>
+            <dt>{label}</dt>
+            <dd>
+              -
+              <Money data={allocation.discountedAmount} />
+            </dd>
+          </div>
+        );
+      })}
+    </>
   );
 }
 

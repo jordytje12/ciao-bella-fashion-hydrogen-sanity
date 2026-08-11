@@ -13,7 +13,7 @@ export function VipSaleGate({loginUrl}: VipSaleGateProps) {
       <p className="max-w-xl font-body text-[16px] leading-relaxed text-black/70">
         De VIP-sale staat vol met items die al zijn afgeprijsd. Log in met je
         VIP-account en krijg daar bovenop nog eens extra korting op je hele
-        bestelling, automatisch verrekend bij het afrekenen.
+        bestelling — automatisch zichtbaar in je winkelwagen.
       </p>
       <div className="pt-2">
         <Link
