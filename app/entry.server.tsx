@@ -52,7 +52,10 @@ export default async function handleRequest(
       'https://static.klaviyo.com',
       ...(hasGtm ? ['https://www.googletagmanager.com'] : []),
       ...(hasMetaPixel ? ['https://connect.facebook.net'] : []),
-      ...(hasClarity ? ['https://www.clarity.ms'] : []),
+      // Wildcard, niet alleen www — Clarity's tag.js laadt de eigenlijke
+      // payload van een load-balanced subdomein (bv. scripts.clarity.ms),
+      // zie https://learn.microsoft.com/en-us/clarity/setup-and-installation/clarity-csp.
+      ...(hasClarity ? ['https://*.clarity.ms'] : []),
     ],
     connectSrc: [
       `https://${projectId}.api.sanity.io`,
