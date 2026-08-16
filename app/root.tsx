@@ -132,6 +132,7 @@ export async function loader(args: Route.LoaderArgs) {
     marketing: {
       gtmContainerId: env.PUBLIC_GTM_CONTAINER_ID ?? null,
       metaPixelId: env.PUBLIC_META_PIXEL_ID ?? null,
+      clarityProjectId: env.PUBLIC_CLARITY_PROJECT_ID ?? null,
     },
   };
 }
@@ -249,6 +250,7 @@ export default function App() {
       <MarketingTags
         gtmContainerId={data.marketing.gtmContainerId}
         metaPixelId={data.marketing.metaPixelId}
+        clarityProjectId={data.marketing.clarityProjectId}
       />
     </Analytics.Provider>
   );

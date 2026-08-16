@@ -17,5 +17,6 @@ declare global {
     // Marketing tags — optioneel, laten leeg = tag laadt niet (lokaal/preview).
     PUBLIC_GTM_CONTAINER_ID?: string;
     PUBLIC_META_PIXEL_ID?: string;
+    PUBLIC_CLARITY_PROJECT_ID?: string;
   }
 }

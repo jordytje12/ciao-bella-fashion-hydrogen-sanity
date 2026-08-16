@@ -30,6 +30,8 @@ type MarketingTagsProps = {
   gtmContainerId?: string | null;
   /** Meta (Facebook/Instagram) Pixel id. */
   metaPixelId?: string | null;
+  /** Microsoft Clarity project id (Clarity > Settings > Overview). */
+  clarityProjectId?: string | null;
 };
 
 // Lichte, eigen typering van de velden die we uit een cart line/cart nodig
@@ -90,6 +92,34 @@ function loadMetaPixel(pixelId: string) {
   window.fbq('track', 'PageView');
 }
 
+// Clarity laadt lazy (pas na consent), dus deze module-scope referentie kan
+// nog `null` zijn wanneer een subscribe-callback vuurt — beide helpers zijn
+// daarom no-ops totdat loadClarity() de echte API heeft gezet.
+type ClarityApi = typeof import('@microsoft/clarity').default;
+
+let clarityApi: ClarityApi | null = null;
+
+function clarityEvent(name: string) {
+  clarityApi?.event(name);
+}
+
+function clarityTag(key: string, value: string | undefined) {
+  if (value) clarityApi?.setTag(key, value);
+}
+
+async function loadClarity(projectId: string) {
+  const {default: Clarity} = await import('@microsoft/clarity');
+  clarityApi = Clarity;
+  Clarity.init(projectId);
+  // Expliciet doorgeven — voor het geval "cookie consent required" aanstaat
+  // in het Clarity-dashboard. Zonder deze call meet Clarity cookieloos en
+  // kloppen unieke bezoekers/heatmaps niet.
+  Clarity.consentV2({
+    ad_Storage: isMarketingConsentAllowed() ? 'granted' : 'denied',
+    analytics_Storage: 'granted',
+  });
+}
+
 function mapCartLine(line: unknown) {
   const cartLine = line as AnalyticsCartLine | null | undefined;
   const merchandise = cartLine?.merchandise;
@@ -108,19 +138,24 @@ function mapCartLine(line: unknown) {
 }
 
 /**
- * Stuurt GA4 (via GTM) en Meta Pixel — beide ontbraken voorheen volledig, er
- * was alleen Shopify Analytics. Beide laden pas ná cookietoestemming (GA4 na
- * analytics-consent, Meta na marketing-consent) en luisteren naar Hydrogen's
- * eigen analytics-events, zodat we niet los hoeven bij te houden wat er op
- * elke pagina gebeurt.
+ * Stuurt GA4 (via GTM), Meta Pixel en Microsoft Clarity — deze ontbraken
+ * voorheen volledig, er was alleen Shopify Analytics. Alle drie laden pas ná
+ * cookietoestemming (GA4 en Clarity na analytics-consent, Meta na
+ * marketing-consent) en luisteren naar Hydrogen's eigen analytics-events,
+ * zodat we niet los hoeven bij te houden wat er op elke pagina gebeurt.
  */
-export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps) {
+export function MarketingTags({
+  gtmContainerId,
+  metaPixelId,
+  clarityProjectId,
+}: MarketingTagsProps) {
   const {subscribe} = useAnalytics();
   const gtmLoadedRef = useRef(false);
   const metaLoadedRef = useRef(false);
+  const clarityLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!gtmContainerId && !metaPixelId) return;
+    if (!gtmContainerId && !metaPixelId && !clarityProjectId) return;
 
     function tryLoad() {
       if (gtmContainerId && !gtmLoadedRef.current && isAnalyticsConsentAllowed()) {
@@ -131,6 +166,14 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
         metaLoadedRef.current = true;
         loadMetaPixel(metaPixelId);
       }
+      if (
+        clarityProjectId &&
+        !clarityLoadedRef.current &&
+        isAnalyticsConsentAllowed()
+      ) {
+        clarityLoadedRef.current = true;
+        void loadClarity(clarityProjectId);
+      }
     }
 
     // Consent kan al eerder (in een vorige sessie) gegeven zijn.
@@ -138,10 +181,10 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
 
     document.addEventListener('visitorConsentCollected', tryLoad);
     return () => document.removeEventListener('visitorConsentCollected', tryLoad);
-  }, [gtmContainerId, metaPixelId]);
+  }, [gtmContainerId, metaPixelId, clarityProjectId]);
 
   useEffect(() => {
-    if (!gtmContainerId && !metaPixelId) return;
+    if (!gtmContainerId && !metaPixelId && !clarityProjectId) return;
 
     subscribe(AnalyticsEvent.PRODUCT_VIEWED, (payload: ProductViewPayload) => {
       pushDataLayerEvent({
@@ -157,6 +200,7 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
           })),
         },
       });
+      clarityTag('product', payload.products[0]?.title);
     });
 
     subscribe(AnalyticsEvent.COLLECTION_VIEWED, (payload: CollectionViewPayload) => {
@@ -165,10 +209,13 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
         item_list_id: payload.collection.handle,
         item_list_name: payload.collection.handle,
       });
+      clarityTag('collection', payload.collection.handle);
     });
 
     subscribe(AnalyticsEvent.SEARCH_VIEWED, (payload: SearchViewPayload) => {
       pushDataLayerEvent({event: 'search', search_term: payload.searchTerm});
+      clarityEvent('search');
+      clarityTag('search_term', payload.searchTerm);
     });
 
     subscribe(AnalyticsEvent.CART_VIEWED, (payload: CartViewPayload) => {
@@ -180,6 +227,7 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
           value: cart?.cost?.totalAmount?.amount,
         },
       });
+      clarityEvent('cart_viewed');
     });
 
     subscribe(
@@ -191,9 +239,10 @@ export function MarketingTags({gtmContainerId, metaPixelId}: MarketingTagsProps)
           event: 'add_to_cart',
           ecommerce: {items: [item]},
         });
+        clarityEvent('add_to_cart');
       },
     );
-  }, [subscribe, gtmContainerId, metaPixelId]);
+  }, [subscribe, gtmContainerId, metaPixelId, clarityProjectId]);
 
   return null;
 }

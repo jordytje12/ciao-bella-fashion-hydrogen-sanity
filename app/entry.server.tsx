@@ -24,6 +24,7 @@ export default async function handleRequest(
   // only widen the CSP with their origins when they're actually configured.
   const hasGtm = Boolean(env.PUBLIC_GTM_CONTAINER_ID);
   const hasMetaPixel = Boolean(env.PUBLIC_META_PIXEL_ID);
+  const hasClarity = Boolean(env.PUBLIC_CLARITY_PROJECT_ID);
   const {nonce, header, NonceProvider} = createContentSecurityPolicy({
     shop: {
       checkoutDomain: context.env.PUBLIC_CHECKOUT_DOMAIN,
@@ -51,6 +52,7 @@ export default async function handleRequest(
       'https://static.klaviyo.com',
       ...(hasGtm ? ['https://www.googletagmanager.com'] : []),
       ...(hasMetaPixel ? ['https://connect.facebook.net'] : []),
+      ...(hasClarity ? ['https://www.clarity.ms'] : []),
     ],
     connectSrc: [
       `https://${projectId}.api.sanity.io`,
@@ -66,6 +68,7 @@ export default async function handleRequest(
       ...(hasMetaPixel
         ? ['https://www.facebook.com', 'https://connect.facebook.net']
         : []),
+      ...(hasClarity ? ['https://*.clarity.ms', 'https://c.bing.com'] : []),
     ],
     styleSrc: ['https://*.klaviyo.com'],
     // fontSrc/imgSrc hebben geen Hydrogen-defaults en vallen na het zetten
@@ -86,6 +89,7 @@ export default async function handleRequest(
         ? ['https://www.googletagmanager.com', 'https://*.google-analytics.com']
         : []),
       ...(hasMetaPixel ? ['https://www.facebook.com'] : []),
+      ...(hasClarity ? ['https://c.bing.com'] : []),
     ],
   });
 
